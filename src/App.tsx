@@ -9,6 +9,8 @@ import VehicleDetails from "@/pages/VehicleDetails";
 import Booking from "@/pages/Booking";
 import MyBookings from "@/pages/MyBookings";
 import Profile from "@/pages/Profile";
+import About from "@/pages/About";
+import Contact from "@/pages/Contact";
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
 import NotFound from "@/pages/NotFound";
