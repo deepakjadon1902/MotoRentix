@@ -9,6 +9,8 @@ import VehicleDetails from "@/pages/VehicleDetails";
 import Booking from "@/pages/Booking";
 import MyBookings from "@/pages/MyBookings";
 import Profile from "@/pages/Profile";
+import About from "@/pages/About";
+import Contact from "@/pages/Contact";
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
 import NotFound from "@/pages/NotFound";
@@ -27,6 +29,8 @@ const App = () => (
             <Route path="/vehicle/:id" element={<VehicleDetails />} />
             <Route path="/booking/:id" element={<Booking />} />
             <Route path="/my-bookings" element={<MyBookings />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/contact" element={<Contact />} />
             <Route path="/profile" element={<Profile />} />
           </Route>
           <Route path="/login" element={<Login />} />
