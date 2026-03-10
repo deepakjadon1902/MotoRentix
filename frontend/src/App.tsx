@@ -16,6 +16,15 @@ import Register from "@/pages/Register";
 import NotFound from "@/pages/NotFound";
 import AdminLogin from "@/pages/admin/AdminLogin";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
+import AdminVehicles from "@/pages/admin/AdminVehicles";
+import AdminUsers from "@/pages/admin/AdminUsers";
+import AdminBookings from "@/pages/admin/AdminBookings";
+import AdminAnalytics from "@/pages/admin/AdminAnalytics";
+import AdminMessages from "@/pages/admin/AdminMessages";
+import AdminUsersDetail from "@/pages/admin/AdminUsersDetail";
+import AdminActiveUsersDetail from "@/pages/admin/AdminActiveUsersDetail";
+import AdminVehiclesDetail from "@/pages/admin/AdminVehiclesDetail";
+import AdminRevenueDetail from "@/pages/admin/AdminRevenueDetail";
 import AdminLayout from "@/layouts/AdminLayout";
 import AdminGuard from "@/components/admin/AdminGuard";
 
@@ -43,6 +52,15 @@ const App = () => (
           <Route element={<AdminGuard />}>
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<AdminDashboard />} />
+              <Route path="vehicles" element={<AdminVehicles />} />
+              <Route path="users" element={<AdminUsers />} />
+              <Route path="bookings" element={<AdminBookings />} />
+              <Route path="analytics" element={<AdminAnalytics />} />
+              <Route path="analytics/users" element={<AdminUsersDetail />} />
+              <Route path="analytics/active-users" element={<AdminActiveUsersDetail />} />
+              <Route path="analytics/vehicles" element={<AdminVehiclesDetail />} />
+              <Route path="analytics/revenue" element={<AdminRevenueDetail />} />
+              <Route path="messages" element={<AdminMessages />} />
             </Route>
           </Route>
           <Route path="*" element={<NotFound />} />

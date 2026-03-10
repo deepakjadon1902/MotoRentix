@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { useAdminStore } from '@/store/adminStore';
+import { useEffect, useState } from "react";
+import { useAdminStore } from "@/store/adminStore";
 
 interface Overview {
   vehicleCount: number;
@@ -7,25 +7,28 @@ interface Overview {
 }
 
 const AdminDashboard = () => {
-  const token = useAdminStore(state => state.token);
+  const token = useAdminStore((state) => state.token);
   const [overview, setOverview] = useState<Overview | null>(null);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   useEffect(() => {
     const load = async () => {
       if (!token) return;
       try {
-        const res = await fetch('/api/admin/overview', {
+        const res = await fetch("/api/admin/analytics", {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) {
-          setError('Failed to load overview');
+          setError("Failed to load overview");
           return;
         }
         const data = await res.json();
-        setOverview(data);
+        setOverview({
+          vehicleCount: data.totalVehicles ?? 0,
+          bookingCount: data.totalBookings ?? 0,
+        });
       } catch {
-        setError('Failed to load overview');
+        setError("Failed to load overview");
       }
     };
 
@@ -48,11 +51,11 @@ const AdminDashboard = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="rounded-2xl border border-border bg-background p-6">
           <p className="text-sm text-muted-foreground">Vehicles</p>
-          <p className="mt-2 text-3xl font-bold text-foreground">{overview?.vehicleCount ?? '—'}</p>
+          <p className="mt-2 text-3xl font-bold text-foreground">{overview?.vehicleCount ?? "-"}</p>
         </div>
         <div className="rounded-2xl border border-border bg-background p-6">
           <p className="text-sm text-muted-foreground">Bookings</p>
-          <p className="mt-2 text-3xl font-bold text-foreground">{overview?.bookingCount ?? '—'}</p>
+          <p className="mt-2 text-3xl font-bold text-foreground">{overview?.bookingCount ?? "-"}</p>
         </div>
       </div>
     </div>

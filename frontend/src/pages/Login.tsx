@@ -13,16 +13,16 @@ const Login = () => {
   const { login } = useStore();
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim() || !password.trim()) {
       toast.error('Please fill in all fields');
       return;
     }
-    const success = login(email, password);
+    const success = await login(email, password);
     if (success) {
       toast.success('Welcome back!');
-      navigate('/');
+      navigate('/profile');
     } else {
       toast.error('Invalid credentials');
     }

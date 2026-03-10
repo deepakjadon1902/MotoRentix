@@ -18,12 +18,21 @@ interface AdminState {
 const tokenKey = 'motorentix_admin_token';
 const userKey = 'motorentix_admin_user';
 
+const safeParse = (value: string | null) => {
+  if (!value) return null;
+  try {
+    return JSON.parse(value) as AdminUser;
+  } catch {
+    return null;
+  }
+};
+
 const getInitialState = () => {
   const token = localStorage.getItem(tokenKey);
-  const userRaw = localStorage.getItem(userKey);
+  const user = safeParse(localStorage.getItem(userKey));
   return {
     token,
-    user: userRaw ? (JSON.parse(userRaw) as AdminUser) : null,
+    user,
     isAdminAuthenticated: Boolean(token),
   };
 };

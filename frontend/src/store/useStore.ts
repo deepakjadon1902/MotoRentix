@@ -1,94 +1,123 @@
-import { create } from 'zustand';
-
-export interface UserProfile {
-  name: string;
-  email: string;
-  dob: string;
-  address: string;
-  city: string;
-  pincode: string;
-  aadhaar: string;
-}
-
-export interface Booking {
-  id: string;
-  vehicleId: string;
-  vehicleName: string;
-  vehicleImage: string;
-  durationType: 'hour' | 'day';
-  startDate: string;
-  endDate: string;
-  totalCharges: number;
-  bookingDate: string;
-  status: 'Confirmed' | 'Completed' | 'Cancelled';
-}
+import { create } from "zustand";
+import { api } from "@/lib/api";
+import type { Booking, UserProfile } from "@/lib/types";
 
 interface AppState {
+  token: string | null;
   isAuthenticated: boolean;
   user: UserProfile | null;
   bookings: Booking[];
-  login: (email: string, password: string) => boolean;
-  register: (user: UserProfile, password: string) => boolean;
+  login: (email: string, password: string) => Promise<boolean>;
+  register: (user: Omit<UserProfile, "id" | "role" | "status">, password: string) => Promise<boolean>;
   logout: () => void;
-  addBooking: (booking: Booking) => void;
+  loadProfile: () => Promise<UserProfile | null>;
+  loadBookings: () => Promise<Booking[]>;
+  createBooking: (payload: {
+    vehicleId: string;
+    durationType: "hour" | "day";
+    startDate: string;
+    endDate: string;
+  }) => Promise<boolean>;
+  sendMessage: (message: string) => Promise<boolean>;
 }
 
-const mockUser: UserProfile = {
-  name: 'Deepak Jadon',
-  email: 'deepakjadon0011@gmail.com',
-  dob: '1998-01-15',
-  address: '12 Rajpur Road, Civil Lines',
-  city: 'Delhi',
-  pincode: '110054',
-  aadhaar: 'XXXX-XXXX-7890',
+const tokenKey = "motorentix_user_token";
+const userKey = "motorentix_user";
+
+const safeParse = (value: string | null) => {
+  if (!value) return null;
+  try {
+    return JSON.parse(value) as UserProfile;
+  } catch {
+    return null;
+  }
 };
 
-const mockBookings: Booking[] = [
-  {
-    id: 'b1',
-    vehicleId: 'bike-1',
-    vehicleName: 'Shadow Phantom 750',
-    vehicleImage: '',
-    durationType: 'day',
-    startDate: '2026-03-01',
-    endDate: '2026-03-03',
-    totalCharges: 2400,
-    bookingDate: '2026-02-28',
-    status: 'Completed',
-  },
-  {
-    id: 'b2',
-    vehicleId: 'scooter-2',
-    vehicleName: 'Zephyr Sport 125',
-    vehicleImage: '',
-    durationType: 'hour',
-    startDate: '2026-03-08',
-    endDate: '2026-03-08',
-    totalCharges: 200,
-    bookingDate: '2026-03-07',
-    status: 'Confirmed',
-  },
-];
+const getInitialState = () => {
+  const token = localStorage.getItem(tokenKey);
+  const user = safeParse(localStorage.getItem(userKey));
+  return {
+    token,
+    user,
+    isAuthenticated: Boolean(token),
+  };
+};
 
-export const useStore = create<AppState>((set) => ({
-  isAuthenticated: false,
-  user: null,
+export const useStore = create<AppState>((set, get) => ({
+  ...getInitialState(),
   bookings: [],
-  login: (email: string, _password: string) => {
-    if (email) {
-      set({ isAuthenticated: true, user: mockUser, bookings: mockBookings });
+  login: async (email: string, password: string) => {
+    try {
+      const data = await api.login({ email, password });
+      localStorage.setItem(tokenKey, data.token);
+      localStorage.setItem(userKey, JSON.stringify(data.user));
+      set({ token: data.token, user: data.user, isAuthenticated: true });
+      await get().loadBookings();
       return true;
+    } catch {
+      return false;
     }
-    return false;
   },
-  register: (user: UserProfile, _password: string) => {
-    set({ isAuthenticated: true, user, bookings: [] });
-    return true;
+  register: async (user, password) => {
+    try {
+      const data = await api.register({ ...user, password });
+      localStorage.setItem(tokenKey, data.token);
+      localStorage.setItem(userKey, JSON.stringify(data.user));
+      set({ token: data.token, user: data.user, isAuthenticated: true });
+      await get().loadBookings();
+      return true;
+    } catch {
+      return false;
+    }
   },
   logout: () => {
-    set({ isAuthenticated: false, user: null, bookings: [] });
+    localStorage.removeItem(tokenKey);
+    localStorage.removeItem(userKey);
+    set({ token: null, user: null, isAuthenticated: false, bookings: [] });
   },
-  addBooking: (booking: Booking) => {
-    set((state) => ({ bookings: [...state.bookings, booking] }));
+  loadProfile: async () => {
+    const token = get().token;
+    if (!token) return null;
+    try {
+      const user = await api.profile(token);
+      localStorage.setItem(userKey, JSON.stringify(user));
+      set({ user });
+      return user;
+    } catch {
+      return null;
+    }
+  },
+  loadBookings: async () => {
+    const token = get().token;
+    if (!token) return [];
+    try {
+      const bookings = await api.listBookings(token);
+      set({ bookings });
+      return bookings;
+    } catch {
+      set({ bookings: [] });
+      return [];
+    }
+  },
+  createBooking: async (payload) => {
+    const token = get().token;
+    if (!token) return false;
+    try {
+      await api.createBooking(token, payload);
+      await get().loadBookings();
+      return true;
+    } catch {
+      return false;
+    }
+  },
+  sendMessage: async (message: string) => {
+    const token = get().token;
+    if (!token) return false;
+    try {
+      await api.sendMessage(token, message);
+      return true;
+    } catch {
+      return false;
+    }
   },
 }));

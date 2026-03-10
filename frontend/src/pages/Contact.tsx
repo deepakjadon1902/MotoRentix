@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Mail, Phone, MapPin, Clock, Send, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
+import { useStore } from '@/store/useStore';
 
 const contactInfo = [
   { icon: Mail, label: 'Email', value: 'support@motorentix.com', subtitle: 'We reply within 2 hours' },
@@ -20,17 +21,33 @@ const faqs = [
 const Contact = () => {
   const [form, setForm] = useState({ name: '', email: '', subject: '', message: '' });
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
+  const { isAuthenticated, sendMessage } = useStore();
 
   const update = (key: string, value: string) => setForm(prev => ({ ...prev, [key]: value }));
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (Object.values(form).some(v => !v.trim())) {
       toast.error('Please fill in all fields');
       return;
     }
-    toast.success('Message sent! We\'ll get back to you soon.');
-    setForm({ name: '', email: '', subject: '', message: '' });
+    if (!isAuthenticated) {
+      toast.error('Please login to send a message');
+      return;
+    }
+
+    const messagePayload = `From: ${form.name} <${form.email}>\nSubject: ${form.subject}\nMessage: ${form.message}`;
+    const ok = await sendMessage(messagePayload);
+    if (ok) {
+      toast.success('Message sent! We\'ll get back to you soon.');
+      const waText = encodeURIComponent(
+        `MotoRentix Contact\nName: ${form.name}\nEmail: ${form.email}\nSubject: ${form.subject}\nMessage: ${form.message}`,
+      );
+      window.open(`https://wa.me/919149370081?text=${waText}`, '_blank');
+      setForm({ name: '', email: '', subject: '', message: '' });
+    } else {
+      toast.error('Failed to send message');
+    }
   };
 
   return (

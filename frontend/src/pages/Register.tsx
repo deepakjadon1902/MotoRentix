@@ -6,18 +6,37 @@ import { useStore } from '@/store/useStore';
 import { toast } from 'sonner';
 import logo from '@/assets/logo.png';
 
+type FormState = {
+  name: string;
+  email: string;
+  dob: string;
+  password: string;
+  address: string;
+  city: string;
+  pincode: string;
+  aadhaarNumber: string;
+};
+
+const initialForm: FormState = {
+  name: '',
+  email: '',
+  dob: '',
+  password: '',
+  address: '',
+  city: '',
+  pincode: '',
+  aadhaarNumber: '',
+};
+
 const Register = () => {
-  const [form, setForm] = useState({
-    name: '', email: '', dob: '', password: '',
-    address: '', city: '', pincode: '', aadhaar: '',
-  });
+  const [form, setForm] = useState<FormState>(initialForm);
   const [showPw, setShowPw] = useState(false);
   const { register } = useStore();
   const navigate = useNavigate();
 
-  const update = (key: string, value: string) => setForm(prev => ({ ...prev, [key]: value }));
+  const update = (key: keyof FormState, value: string) => setForm(prev => ({ ...prev, [key]: value }));
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const { password, ...profile } = form;
     if (Object.values(form).some(v => !v.trim())) {
@@ -28,12 +47,16 @@ const Register = () => {
       toast.error('Password must be at least 6 characters');
       return;
     }
-    register(profile, password);
-    toast.success('Account created successfully!');
-    navigate('/');
+    const ok = await register(profile, password);
+    if (ok) {
+      toast.success('Account created successfully!');
+      navigate('/profile');
+    } else {
+      toast.error('Registration failed');
+    }
   };
 
-  const fields: { key: string; label: string; type: string; placeholder: string; half?: boolean }[] = [
+  const fields: { key: keyof FormState; label: string; type: string; placeholder: string; half?: boolean }[] = [
     { key: 'name', label: 'Full Name', type: 'text', placeholder: 'John Doe' },
     { key: 'email', label: 'Email', type: 'email', placeholder: 'you@example.com' },
     { key: 'dob', label: 'Date of Birth', type: 'date', placeholder: '', half: true },
@@ -41,7 +64,7 @@ const Register = () => {
     { key: 'address', label: 'Address', type: 'text', placeholder: '42 MG Road' },
     { key: 'city', label: 'City', type: 'text', placeholder: 'Bangalore', half: true },
     { key: 'pincode', label: 'Pincode', type: 'text', placeholder: '560001', half: true },
-    { key: 'aadhaar', label: 'Aadhaar Number', type: 'text', placeholder: 'XXXX-XXXX-XXXX' },
+    { key: 'aadhaarNumber', label: 'Aadhaar Number', type: 'text', placeholder: 'XXXX-XXXX-XXXX' },
   ];
 
   return (
@@ -67,7 +90,7 @@ const Register = () => {
                   <div className="relative">
                     <input
                       type={isPassword ? (showPw ? 'text' : 'password') : f.type}
-                      value={(form as any)[f.key]}
+                      value={form[f.key]}
                       onChange={e => update(f.key, e.target.value)}
                       placeholder={f.placeholder}
                       className="w-full px-4 py-3 rounded-lg bg-secondary text-foreground border border-border focus:outline-none focus:ring-2 focus:ring-primary text-sm"

@@ -96,6 +96,13 @@
   }
 }
 
+.admin-shell {
+  background: radial-gradient(circle at 10% 10%, rgba(59, 130, 246, 0.15), transparent 40%),
+    radial-gradient(circle at 90% 10%, rgba(16, 185, 129, 0.15), transparent 40%),
+    radial-gradient(circle at 50% 90%, rgba(249, 115, 22, 0.12), transparent 50%),
+    linear-gradient(180deg, hsl(var(--secondary)) 0%, hsl(var(--background)) 40%, hsl(var(--secondary)) 100%);
+}
+
 @layer base {
   * {
     @apply border-border;

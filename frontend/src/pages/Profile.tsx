@@ -1,37 +1,51 @@
-import { motion } from 'framer-motion';
-import { useStore } from '@/store/useStore';
-import { Link } from 'react-router-dom';
-import { User, Mail, MapPin, Calendar, Hash, IndianRupee, Bookmark } from 'lucide-react';
+import { useEffect } from "react";
+import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
+import { User, Mail, MapPin, Calendar, Hash, IndianRupee, Bookmark } from "lucide-react";
+import { useStore } from "@/store/useStore";
 
 const Profile = () => {
-  const { user, bookings, isAuthenticated } = useStore();
+  const { user, bookings, isAuthenticated, loadProfile, loadBookings } = useStore();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadProfile();
+      loadBookings();
+    }
+  }, [isAuthenticated, loadProfile, loadBookings]);
 
   if (!isAuthenticated || !user) {
     return (
       <div className="section-padding min-h-screen flex items-center justify-center">
         <div className="text-center space-y-4">
           <h2 className="font-heading text-2xl font-bold text-foreground">Please login to view profile</h2>
-          <Link to="/login" className="btn-primary-gradient px-6 py-3 rounded-lg text-primary-foreground font-semibold inline-block">Login</Link>
+          <Link to="/login" className="btn-primary-gradient px-6 py-3 rounded-lg text-primary-foreground font-semibold inline-block">
+            Login
+          </Link>
         </div>
       </div>
     );
   }
 
-  const totalSpent = bookings.reduce((sum, b) => sum + b.totalCharges, 0);
+  const totalSpent = bookings.reduce((sum, b) => sum + b.totalPrice, 0);
 
   return (
     <div className="section-padding bg-background min-h-screen">
       <div className="container mx-auto max-w-4xl">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
           <h1 className="font-heading text-3xl md:text-4xl font-bold text-foreground">
-            Welcome back, <span className="text-gradient-primary">{user.name.split(' ')[0]}</span>
+            Welcome back, <span className="text-gradient-primary">{user.name.split(" ")[0]}</span>
           </h1>
           <p className="text-muted-foreground mt-2">Manage your account and view your stats</p>
         </motion.div>
 
-        {/* Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="glass rounded-2xl p-6 flex items-center gap-4">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="glass rounded-2xl p-6 flex items-center gap-4"
+          >
             <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
               <Bookmark className="text-primary" size={24} />
             </div>
@@ -40,46 +54,59 @@ const Profile = () => {
               <p className="font-heading text-2xl font-bold text-foreground">{bookings.length}</p>
             </div>
           </motion.div>
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="glass rounded-2xl p-6 flex items-center gap-4">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="glass rounded-2xl p-6 flex items-center gap-4"
+          >
             <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center">
               <IndianRupee className="text-accent" size={24} />
             </div>
             <div>
               <span className="text-sm text-muted-foreground">Total Spent</span>
-              <p className="font-heading text-2xl font-bold text-foreground">₹{totalSpent}</p>
+              <p className="font-heading text-2xl font-bold text-foreground">INR {totalSpent}</p>
             </div>
           </motion.div>
         </div>
 
-        {/* User Info */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="glass rounded-2xl p-6 mb-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="glass rounded-2xl p-6 mb-8"
+        >
           <h2 className="font-heading text-xl font-bold text-foreground mb-5">Personal Information</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             {[
-              { icon: User, label: 'Name', value: user.name },
-              { icon: Mail, label: 'Email', value: user.email },
-              { icon: Calendar, label: 'Date of Birth', value: user.dob },
-              { icon: MapPin, label: 'Address', value: user.address },
-              { icon: MapPin, label: 'City', value: user.city },
-              { icon: Hash, label: 'Pincode', value: user.pincode },
-              { icon: Hash, label: 'Aadhaar', value: user.aadhaar },
-            ].map(item => (
+              { icon: User, label: "Name", value: user.name },
+              { icon: Mail, label: "Email", value: user.email },
+              { icon: Calendar, label: "Date of Birth", value: user.dob },
+              { icon: MapPin, label: "Address", value: user.address },
+              { icon: MapPin, label: "City", value: user.city },
+              { icon: Hash, label: "Pincode", value: user.pincode },
+              { icon: Hash, label: "Aadhaar", value: user.aadhaarNumber },
+            ].map((item) => (
               <div key={item.label} className="flex items-start gap-3">
                 <div className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center shrink-0 mt-0.5">
                   <item.icon size={16} className="text-muted-foreground" />
                 </div>
                 <div>
                   <span className="text-xs text-muted-foreground">{item.label}</span>
-                  <p className="text-sm font-medium text-foreground">{item.value}</p>
+                  <p className="text-sm font-medium text-foreground">{item.value || "-"}</p>
                 </div>
               </div>
             ))}
           </div>
         </motion.div>
 
-        {/* Booking history table */}
         {bookings.length > 0 && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="glass rounded-2xl overflow-hidden">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="glass rounded-2xl overflow-hidden"
+          >
             <div className="p-6 border-b border-border">
               <h2 className="font-heading text-xl font-bold text-foreground">Booking History</h2>
             </div>
@@ -95,14 +122,26 @@ const Profile = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {bookings.map(b => (
+                  {bookings.map((b) => (
                     <tr key={b.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
-                      <td className="px-6 py-4 font-medium text-foreground">{b.vehicleName}</td>
-                      <td className="px-6 py-4 text-muted-foreground">{b.startDate} → {b.endDate}</td>
-                      <td className="px-6 py-4 text-muted-foreground">{b.bookingDate}</td>
-                      <td className="px-6 py-4 text-right font-medium text-foreground">₹{b.totalCharges}</td>
+                      <td className="px-6 py-4 font-medium text-foreground">{b.vehicle.name}</td>
+                      <td className="px-6 py-4 text-muted-foreground">
+                        {b.startDate} to {b.endDate}
+                      </td>
+                      <td className="px-6 py-4 text-muted-foreground">
+                        {b.createdAt ? b.createdAt.split("T")[0] : "-"}
+                      </td>
+                      <td className="px-6 py-4 text-right font-medium text-foreground">INR {b.totalPrice}</td>
                       <td className="px-6 py-4 text-right">
-                        <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${b.status === 'Confirmed' ? 'bg-primary/10 text-primary' : b.status === 'Completed' ? 'bg-success/10 text-success' : 'bg-accent/10 text-accent'}`}>
+                        <span
+                          className={`text-xs font-medium px-2.5 py-1 rounded-full ${
+                            b.status === "confirmed"
+                              ? "bg-primary/10 text-primary"
+                              : b.status === "completed"
+                                ? "bg-success/10 text-success"
+                                : "bg-accent/10 text-accent"
+                          }`}
+                        >
                           {b.status}
                         </span>
                       </td>

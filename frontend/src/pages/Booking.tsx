@@ -1,20 +1,38 @@
-import { useState, useMemo } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { ArrowLeft, CalendarDays, Clock } from 'lucide-react';
-import { vehicles } from '@/data/vehicles';
-import { useStore } from '@/store/useStore';
-import { toast } from 'sonner';
+import { useEffect, useMemo, useState } from "react";
+import { useParams, useNavigate, Link } from "react-router-dom";
+import { motion } from "framer-motion";
+import { ArrowLeft, CalendarDays, Clock } from "lucide-react";
+import { toast } from "sonner";
+import { api } from "@/lib/api";
+import type { Vehicle } from "@/lib/types";
+import { useStore } from "@/store/useStore";
 
 const Booking = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { addBooking, isAuthenticated } = useStore();
-  const vehicle = vehicles.find(v => v.id === id);
+  const { createBooking, isAuthenticated } = useStore();
+  const [vehicle, setVehicle] = useState<Vehicle | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const [durationType, setDurationType] = useState<'hour' | 'day'>('day');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [durationType, setDurationType] = useState<"hour" | "day">("day");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
+  useEffect(() => {
+    const load = async () => {
+      if (!id) return;
+      setLoading(true);
+      try {
+        const v = await api.getVehicle(id);
+        setVehicle(v);
+      } catch {
+        setVehicle(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [id]);
 
   const totalCharges = useMemo(() => {
     if (!vehicle || !startDate || !endDate) return 0;
@@ -22,14 +40,34 @@ const Booking = () => {
     const end = new Date(endDate);
     const diffMs = end.getTime() - start.getTime();
     if (diffMs <= 0) return 0;
-    if (durationType === 'day') {
+    if (durationType === "day") {
       const days = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
       return days * vehicle.pricePerDay;
-    } else {
-      const hours = Math.ceil(diffMs / (1000 * 60 * 60));
-      return hours * vehicle.pricePerHour;
     }
+    const hours = Math.ceil(diffMs / (1000 * 60 * 60));
+    return hours * vehicle.pricePerHour;
   }, [vehicle, startDate, endDate, durationType]);
+
+  if (!isAuthenticated) {
+    return (
+      <div className="section-padding min-h-screen flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <h2 className="font-heading text-2xl font-bold text-foreground">Please login to book</h2>
+          <Link to="/login" className="btn-primary-gradient px-6 py-3 rounded-lg text-primary-foreground font-semibold inline-block">
+            Login
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="section-padding min-h-screen flex items-center justify-center">
+        <p className="text-muted-foreground">Loading vehicle...</p>
+      </div>
+    );
+  }
 
   if (!vehicle) {
     return (
@@ -39,36 +77,23 @@ const Booking = () => {
     );
   }
 
-  if (!isAuthenticated) {
-    return (
-      <div className="section-padding min-h-screen flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <h2 className="font-heading text-2xl font-bold text-foreground">Please login to book</h2>
-          <Link to="/login" className="btn-primary-gradient px-6 py-3 rounded-lg text-primary-foreground font-semibold inline-block">Login</Link>
-        </div>
-      </div>
-    );
-  }
-
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (!startDate || !endDate || totalCharges <= 0) {
-      toast.error('Please select valid dates');
+      toast.error("Please select valid dates");
       return;
     }
-    addBooking({
-      id: `b-${Date.now()}`,
+    const ok = await createBooking({
       vehicleId: vehicle.id,
-      vehicleName: vehicle.name,
-      vehicleImage: vehicle.image,
       durationType,
       startDate,
       endDate,
-      totalCharges,
-      bookingDate: new Date().toISOString().split('T')[0],
-      status: 'Confirmed',
     });
-    toast.success('Booking confirmed!');
-    navigate('/my-bookings');
+    if (ok) {
+      toast.success("Booking confirmed!");
+      navigate("/my-bookings");
+    } else {
+      toast.error("Booking failed");
+    }
   };
 
   return (
@@ -88,7 +113,11 @@ const Booking = () => {
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">Vehicle</label>
                 <div className="glass rounded-lg p-3 flex items-center gap-4">
-                  <img src={vehicle.image} alt={vehicle.name} className="w-16 h-12 object-cover rounded-lg" />
+                  {vehicle.image ? (
+                    <img src={vehicle.image} alt={vehicle.name} className="w-16 h-12 object-cover rounded-lg" />
+                  ) : (
+                    <div className="w-16 h-12 rounded-lg bg-secondary" />
+                  )}
                   <div>
                     <p className="font-semibold text-foreground">{vehicle.name}</p>
                     <p className="text-xs text-muted-foreground">{vehicle.category}</p>
@@ -100,14 +129,18 @@ const Booking = () => {
                 <label className="block text-sm font-medium text-foreground mb-2">Duration Type</label>
                 <div className="flex gap-3">
                   <button
-                    onClick={() => setDurationType('hour')}
-                    className={`flex items-center gap-2 px-5 py-3 rounded-lg font-medium text-sm transition-all ${durationType === 'hour' ? 'bg-primary text-primary-foreground' : 'glass text-foreground hover:bg-secondary'}`}
+                    onClick={() => setDurationType("hour")}
+                    className={`flex items-center gap-2 px-5 py-3 rounded-lg font-medium text-sm transition-all ${
+                      durationType === "hour" ? "bg-primary text-primary-foreground" : "glass text-foreground hover:bg-secondary"
+                    }`}
                   >
                     <Clock size={16} /> Per Hour
                   </button>
                   <button
-                    onClick={() => setDurationType('day')}
-                    className={`flex items-center gap-2 px-5 py-3 rounded-lg font-medium text-sm transition-all ${durationType === 'day' ? 'bg-primary text-primary-foreground' : 'glass text-foreground hover:bg-secondary'}`}
+                    onClick={() => setDurationType("day")}
+                    className={`flex items-center gap-2 px-5 py-3 rounded-lg font-medium text-sm transition-all ${
+                      durationType === "day" ? "bg-primary text-primary-foreground" : "glass text-foreground hover:bg-secondary"
+                    }`}
                   >
                     <CalendarDays size={16} /> Per Day
                   </button>
@@ -118,18 +151,18 @@ const Booking = () => {
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">Start Date</label>
                   <input
-                    type={durationType === 'hour' ? 'datetime-local' : 'date'}
+                    type={durationType === "hour" ? "datetime-local" : "date"}
                     value={startDate}
-                    onChange={e => setStartDate(e.target.value)}
+                    onChange={(e) => setStartDate(e.target.value)}
                     className="w-full px-4 py-3 rounded-lg bg-secondary text-foreground border border-border focus:outline-none focus:ring-2 focus:ring-primary text-sm"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">End Date</label>
                   <input
-                    type={durationType === 'hour' ? 'datetime-local' : 'date'}
+                    type={durationType === "hour" ? "datetime-local" : "date"}
                     value={endDate}
-                    onChange={e => setEndDate(e.target.value)}
+                    onChange={(e) => setEndDate(e.target.value)}
                     className="w-full px-4 py-3 rounded-lg bg-secondary text-foreground border border-border focus:outline-none focus:ring-2 focus:ring-primary text-sm"
                   />
                 </div>
@@ -137,7 +170,7 @@ const Booking = () => {
 
               <button
                 onClick={handleConfirm}
-                disabled={totalCharges <= 0}
+                disabled={totalCharges <= 0 || !vehicle.availability}
                 className="w-full btn-primary-gradient py-3.5 rounded-xl font-semibold text-primary-foreground text-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Confirm Booking
@@ -145,18 +178,31 @@ const Booking = () => {
             </div>
           </motion.div>
 
-          {/* Summary */}
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="lg:col-span-2">
             <div className="glass rounded-2xl p-6 sticky top-24 space-y-4">
               <h3 className="font-heading text-lg font-bold text-foreground">Booking Summary</h3>
               <div className="space-y-3 text-sm">
-                <div className="flex justify-between"><span className="text-muted-foreground">Vehicle</span><span className="font-medium text-foreground">{vehicle.name}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Rate</span><span className="font-medium text-foreground">₹{durationType === 'hour' ? vehicle.pricePerHour + '/hr' : vehicle.pricePerDay + '/day'}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Start</span><span className="font-medium text-foreground">{startDate || '—'}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">End</span><span className="font-medium text-foreground">{endDate || '—'}</span></div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Vehicle</span>
+                  <span className="font-medium text-foreground">{vehicle.name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Rate</span>
+                  <span className="font-medium text-foreground">
+                    {durationType === "hour" ? `${vehicle.pricePerHour}/hr` : `${vehicle.pricePerDay}/day`}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Start</span>
+                  <span className="font-medium text-foreground">{startDate || "-"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">End</span>
+                  <span className="font-medium text-foreground">{endDate || "-"}</span>
+                </div>
                 <div className="border-t border-border pt-3 flex justify-between">
                   <span className="font-semibold text-foreground">Total</span>
-                  <span className="font-heading text-xl font-bold text-primary">₹{totalCharges}</span>
+                  <span className="font-heading text-xl font-bold text-primary">INR {totalCharges}</span>
                 </div>
               </div>
             </div>
