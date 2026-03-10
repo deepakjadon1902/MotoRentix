@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, User, LogOut } from 'lucide-react';
-import logo from '@/assets/logo.png';
+import logo from '@/assets/logo.jpeg';
 import { useStore } from '@/store/useStore';
 
 const Navbar = () => {
@@ -26,8 +26,12 @@ const Navbar = () => {
       <div className="container mx-auto px-4 lg:px-8">
         <div className="flex items-center justify-between h-16 md:h-20">
           <Link to="/" className="flex items-center gap-2">
-            <img src={logo} alt="MotoRentix" className="h-10 md:h-12 w-auto" />
-          </Link>
+  <img 
+    src={logo} 
+    alt="MotoRentix" 
+    className="h-14 md:h-16 w-14 md:w-16 rounded-full object-contain"
+  />
+</Link>
 
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-1">
