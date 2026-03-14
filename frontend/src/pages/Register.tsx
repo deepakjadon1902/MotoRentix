@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { Eye, EyeOff } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { toast } from 'sonner';
-import logo from '@/assets/logo.png';
+import logo from '@/assets/logo.jpeg';
 
 type FormState = {
   name: string;
@@ -47,12 +47,13 @@ const Register = () => {
       toast.error('Password must be at least 6 characters');
       return;
     }
-    const ok = await register(profile, password);
-    if (ok) {
+    const result = await register(profile, password);
+    if (result.ok) {
       toast.success('Account created successfully!');
       navigate('/profile');
     } else {
-      toast.error('Registration failed');
+      const message = result.message || 'Registration failed';
+      toast.error(message);
     }
   };
 

@@ -1,4 +1,4 @@
-import { create } from 'zustand';
+import { create } from "zustand";
 
 export interface AdminUser {
   id: string;
@@ -11,7 +11,7 @@ interface AdminState {
   token: string | null;
   user: AdminUser | null;
   isAdminAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
+  login: (email: string, password: string) => Promise<{ ok: boolean; message?: string }>;
   logout: () => void;
 }
 
@@ -37,6 +37,13 @@ const getInitialState = () => {
   };
 };
 
+const normalizeErrorMessage = (message: string) => {
+  if (/failed to fetch|networkerror/i.test(message)) {
+    return 'Server unreachable. Please start the backend.';
+  }
+  return message;
+};
+
 export const useAdminStore = create<AdminState>((set) => ({
   ...getInitialState(),
   login: async (email: string, password: string) => {
@@ -47,11 +54,14 @@ export const useAdminStore = create<AdminState>((set) => ({
         body: JSON.stringify({ email, password }),
       });
 
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        return false;
+        const message =
+          typeof data === 'object' && data && 'message' in data
+            ? (data as { message?: string }).message || 'Login failed'
+            : 'Login failed';
+        return { ok: false, message: normalizeErrorMessage(message) };
       }
-
-      const data = await res.json();
       const token = data.token as string;
       const user = data.user as AdminUser;
 
@@ -59,9 +69,10 @@ export const useAdminStore = create<AdminState>((set) => ({
       localStorage.setItem(userKey, JSON.stringify(user));
 
       set({ token, user, isAdminAuthenticated: true });
-      return true;
-    } catch {
-      return false;
+      return { ok: true };
+    } catch (err) {
+      const raw = err instanceof Error ? err.message : 'Login failed';
+      return { ok: false, message: normalizeErrorMessage(raw) };
     }
   },
   logout: () => {

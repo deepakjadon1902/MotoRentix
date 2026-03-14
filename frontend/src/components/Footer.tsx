@@ -13,11 +13,11 @@ const Footer = () => {
         <div className="container mx-auto px-4 lg:px-8 py-12">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
             <div className="flex flex-col gap-3">
-              <img 
-  src={logo} 
-  alt="MotoRentix" 
-  className="h-12 w-12 rounded-full object-contain p-1 bg-white self-start brightness-0 invert"
-/>
+              <img
+                src={logo}
+                alt="MotoRentix"
+                className="h-12 w-12 rounded-full object-cover p-1 bg-background self-start ring-2 ring-background/70 shadow-lg"
+              />
               <p className="text-sm opacity-70 max-w-xs">
                 Ride the future. Premium bikes & scooters on rent — anytime, anywhere.
               </p>

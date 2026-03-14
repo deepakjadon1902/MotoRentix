@@ -7,8 +7,11 @@ interface AppState {
   isAuthenticated: boolean;
   user: UserProfile | null;
   bookings: Booking[];
-  login: (email: string, password: string) => Promise<boolean>;
-  register: (user: Omit<UserProfile, "id" | "role" | "status">, password: string) => Promise<boolean>;
+  login: (email: string, password: string) => Promise<{ ok: boolean; message?: string }>;
+  register: (
+    user: Omit<UserProfile, "id" | "role" | "status">,
+    password: string,
+  ) => Promise<{ ok: boolean; message?: string }>;
   logout: () => void;
   loadProfile: () => Promise<UserProfile | null>;
   loadBookings: () => Promise<Booking[]>;
@@ -43,6 +46,13 @@ const getInitialState = () => {
   };
 };
 
+const normalizeErrorMessage = (message: string) => {
+  if (/failed to fetch|networkerror/i.test(message)) {
+    return "Server unreachable. Please start the backend.";
+  }
+  return message;
+};
+
 export const useStore = create<AppState>((set, get) => ({
   ...getInitialState(),
   bookings: [],
@@ -53,9 +63,10 @@ export const useStore = create<AppState>((set, get) => ({
       localStorage.setItem(userKey, JSON.stringify(data.user));
       set({ token: data.token, user: data.user, isAuthenticated: true });
       await get().loadBookings();
-      return true;
-    } catch {
-      return false;
+      return { ok: true };
+    } catch (err) {
+      const raw = err instanceof Error ? err.message : "Login failed";
+      return { ok: false, message: normalizeErrorMessage(raw) };
     }
   },
   register: async (user, password) => {
@@ -65,9 +76,10 @@ export const useStore = create<AppState>((set, get) => ({
       localStorage.setItem(userKey, JSON.stringify(data.user));
       set({ token: data.token, user: data.user, isAuthenticated: true });
       await get().loadBookings();
-      return true;
-    } catch {
-      return false;
+      return { ok: true };
+    } catch (err) {
+      const raw = err instanceof Error ? err.message : "Registration failed";
+      return { ok: false, message: normalizeErrorMessage(raw) };
     }
   },
   logout: () => {
