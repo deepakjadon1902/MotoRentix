@@ -37,6 +37,17 @@ app.use(
 app.use(express.json({ limit: "1mb" }));
 app.use(morgan("dev"));
 
+app.get("/", (req, res) => {
+  res.status(200).json({
+    name: "MotoRentix API",
+    status: "ok",
+  });
+});
+
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "ok" });
+});
+
 app.use("/uploads", express.static(path.resolve("backend", "uploads")));
 
 app.use("/api/auth", authRoutes);
