@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, CalendarDays, Clock } from "lucide-react";
+import { ArrowLeft, CalendarDays, CheckCircle, Clock, ShieldCheck, Sparkles, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import type { Vehicle } from "@/lib/types";
 import { useStore } from "@/store/useStore";
+import VehicleImageGallery from "@/components/VehicleImageGallery";
 
 const Booking = () => {
   const { id } = useParams();
@@ -34,18 +35,18 @@ const Booking = () => {
     load();
   }, [id]);
 
-  const totalCharges = useMemo(() => {
-    if (!vehicle || !startDate || !endDate) return 0;
+  const pricing = useMemo(() => {
+    if (!vehicle || !startDate || !endDate) return { units: 0, total: 0, label: "" };
     const start = new Date(startDate);
     const end = new Date(endDate);
     const diffMs = end.getTime() - start.getTime();
-    if (diffMs <= 0) return 0;
+    if (diffMs <= 0) return { units: 0, total: 0, label: "" };
     if (durationType === "day") {
       const days = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-      return days * vehicle.pricePerDay;
+      return { units: days, total: days * vehicle.pricePerDay, label: `${days} day${days === 1 ? "" : "s"}` };
     }
     const hours = Math.ceil(diffMs / (1000 * 60 * 60));
-    return hours * vehicle.pricePerHour;
+    return { units: hours, total: hours * vehicle.pricePerHour, label: `${hours} hour${hours === 1 ? "" : "s"}` };
   }, [vehicle, startDate, endDate, durationType]);
 
   if (!isAuthenticated) {
@@ -78,7 +79,7 @@ const Booking = () => {
   }
 
   const handleConfirm = async () => {
-    if (!startDate || !endDate || totalCharges <= 0) {
+    if (!startDate || !endDate || pricing.total <= 0) {
       toast.error("Please select valid dates");
       return;
     }
@@ -98,7 +99,7 @@ const Booking = () => {
 
   return (
     <div className="section-padding bg-background min-h-screen">
-      <div className="container mx-auto max-w-4xl">
+      <div className="container mx-auto max-w-6xl">
         <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-6">
           <ArrowLeft size={18} /> Back
         </button>
@@ -107,104 +108,124 @@ const Booking = () => {
           Book {vehicle.name}
         </motion.h1>
 
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-          <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="lg:col-span-3 space-y-6">
-            <div className="glass rounded-2xl p-6 space-y-5">
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">Vehicle</label>
-                <div className="glass rounded-lg p-3 flex items-center gap-4">
-                  {vehicle.image ? (
-                    <img src={vehicle.image} alt={vehicle.name} className="w-16 h-12 object-cover rounded-lg" />
-                  ) : (
-                    <div className="w-16 h-12 rounded-lg bg-secondary" />
-                  )}
-                  <div>
-                    <p className="font-semibold text-foreground">{vehicle.name}</p>
-                    <p className="text-xs text-muted-foreground">{vehicle.category}</p>
-                  </div>
+        <div className="grid grid-cols-1 lg:grid-cols-[1.05fr_0.95fr] gap-8 lg:gap-10 items-start">
+          <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
+            <VehicleImageGallery
+              images={(vehicle.images && vehicle.images.length > 0) ? vehicle.images : vehicle.image ? [vehicle.image] : []}
+              alt={vehicle.name}
+            />
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="glass rounded-2xl p-5 border border-border/60">
+                <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                  <ShieldCheck size={16} className="text-primary" /> Verified & inspected
                 </div>
+                <p className="text-xs text-muted-foreground mt-1">Every ride is checked before pickup for a smooth experience.</p>
+              </div>
+              <div className="glass rounded-2xl p-5 border border-border/60">
+                <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                  <Sparkles size={16} className="text-accent" /> Clean & ready
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">Sanitized and prepared so you can start riding instantly.</p>
+              </div>
+            </div>
+          </motion.div>
+
+          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="lg:sticky lg:top-6">
+            <div className="glass rounded-3xl p-6 md:p-7 border border-border/60 space-y-5">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Booking</p>
+                  <h2 className="font-heading text-xl md:text-2xl font-bold text-foreground mt-1">Choose dates & confirm</h2>
+                </div>
+                {vehicle.availability ? (
+                  <span className="inline-flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-full bg-success/10 text-success">
+                    <CheckCircle size={14} /> Available
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-full bg-accent/10 text-accent">
+                    <XCircle size={14} /> Unavailable
+                  </span>
+                )}
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">Duration Type</label>
-                <div className="flex gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   <button
+                    type="button"
                     onClick={() => setDurationType("hour")}
-                    className={`flex items-center gap-2 px-5 py-3 rounded-lg font-medium text-sm transition-all ${
+                    className={`flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm transition-all ${
                       durationType === "hour" ? "bg-primary text-primary-foreground" : "glass text-foreground hover:bg-secondary"
                     }`}
                   >
-                    <Clock size={16} /> Per Hour
+                    <Clock size={16} /> Hourly
                   </button>
                   <button
+                    type="button"
                     onClick={() => setDurationType("day")}
-                    className={`flex items-center gap-2 px-5 py-3 rounded-lg font-medium text-sm transition-all ${
+                    className={`flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm transition-all ${
                       durationType === "day" ? "bg-primary text-primary-foreground" : "glass text-foreground hover:bg-secondary"
                     }`}
                   >
-                    <CalendarDays size={16} /> Per Day
+                    <CalendarDays size={16} /> Daily
                   </button>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">Start Date</label>
+                  <label className="block text-sm font-medium text-foreground mb-2">Start</label>
                   <input
                     type={durationType === "hour" ? "datetime-local" : "date"}
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full px-4 py-3 rounded-lg bg-secondary text-foreground border border-border focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                    className="w-full px-4 py-3 rounded-xl bg-secondary text-foreground border border-border focus:outline-none focus:ring-2 focus:ring-primary text-sm"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">End Date</label>
+                  <label className="block text-sm font-medium text-foreground mb-2">End</label>
                   <input
                     type={durationType === "hour" ? "datetime-local" : "date"}
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
-                    className="w-full px-4 py-3 rounded-lg bg-secondary text-foreground border border-border focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                    className="w-full px-4 py-3 rounded-xl bg-secondary text-foreground border border-border focus:outline-none focus:ring-2 focus:ring-primary text-sm"
                   />
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-border/60 bg-background/60 p-5 space-y-3">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Vehicle</span>
+                  <span className="font-semibold text-foreground">{vehicle.name}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Rate</span>
+                  <span className="font-semibold text-foreground">
+                    {durationType === "hour" ? `INR ${vehicle.pricePerHour}/hr` : `INR ${vehicle.pricePerDay}/day`}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Duration</span>
+                  <span className="font-semibold text-foreground">{pricing.label || "-"}</span>
+                </div>
+                <div className="border-t border-border pt-3 flex items-end justify-between">
+                  <span className="font-semibold text-foreground">Total</span>
+                  <span className="font-heading text-2xl font-bold text-primary">INR {pricing.total}</span>
                 </div>
               </div>
 
               <button
                 onClick={handleConfirm}
-                disabled={totalCharges <= 0 || !vehicle.availability}
+                disabled={pricing.total <= 0 || !vehicle.availability}
                 className="w-full btn-primary-gradient py-3.5 rounded-xl font-semibold text-primary-foreground text-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Confirm Booking
               </button>
-            </div>
-          </motion.div>
 
-          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="lg:col-span-2">
-            <div className="glass rounded-2xl p-6 sticky top-24 space-y-4">
-              <h3 className="font-heading text-lg font-bold text-foreground">Booking Summary</h3>
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Vehicle</span>
-                  <span className="font-medium text-foreground">{vehicle.name}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Rate</span>
-                  <span className="font-medium text-foreground">
-                    {durationType === "hour" ? `${vehicle.pricePerHour}/hr` : `${vehicle.pricePerDay}/day`}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Start</span>
-                  <span className="font-medium text-foreground">{startDate || "-"}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">End</span>
-                  <span className="font-medium text-foreground">{endDate || "-"}</span>
-                </div>
-                <div className="border-t border-border pt-3 flex justify-between">
-                  <span className="font-semibold text-foreground">Total</span>
-                  <span className="font-heading text-xl font-bold text-primary">INR {totalCharges}</span>
-                </div>
-              </div>
+              <p className="text-xs text-muted-foreground">
+                By confirming, you agree to follow safety rules and return the vehicle on time.
+              </p>
             </div>
           </motion.div>
         </div>

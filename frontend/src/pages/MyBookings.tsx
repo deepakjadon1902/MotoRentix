@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { CalendarDays, IndianRupee, Clock, CheckCircle, XCircle, AlertCircle, Bike } from "lucide-react";
@@ -12,6 +12,7 @@ const statusConfig = {
 
 const MyBookings = () => {
   const { bookings, isAuthenticated, loadBookings } = useStore();
+  const [brokenImages, setBrokenImages] = useState<Record<string, true>>({});
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -67,8 +68,13 @@ const MyBookings = () => {
                 >
                   <div className="flex flex-col md:flex-row">
                     <div className="md:w-56 lg:w-64 shrink-0">
-                      {vehicle.image ? (
-                        <img src={vehicle.image} alt={vehicle.name} className="w-full h-48 md:h-full object-cover" />
+                      {vehicle.image && !brokenImages[booking.id] ? (
+                        <img
+                          src={vehicle.image}
+                          alt={vehicle.name}
+                          className="w-full h-48 md:h-full object-cover"
+                          onError={() => setBrokenImages((prev) => ({ ...prev, [booking.id]: true }))}
+                        />
                       ) : (
                         <div className="w-full h-48 md:h-full bg-secondary flex items-center justify-center">
                           <Bike size={48} className="text-muted-foreground" />

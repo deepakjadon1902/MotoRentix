@@ -1,5 +1,20 @@
 import type { Vehicle } from "@/lib/types";
+import type { Vehicle } from "@/lib/types";
 import { API_BASE_URL } from "@/lib/apiBase";
+import { resolveApiAssetUrl } from "@/lib/assetUrl";
+
+type VehicleDto = {
+  _id?: string;
+  id?: string;
+  name?: string;
+  category?: "bike" | "scooter";
+  description?: string;
+  image?: string;
+  images?: string[];
+  pricePerHour?: number;
+  pricePerDay?: number;
+  availability?: boolean;
+};
 
 export type AdminUser = {
   _id?: string;
@@ -63,16 +78,28 @@ const request = async <T>(path: string, token: string, options: RequestInit = {}
   return data as T;
 };
 
-const mapVehicle = (v: VehicleDto): Vehicle => ({
+const mapVehicle = (v: VehicleDto): Vehicle => {
+  const normalizedImages =
+    Array.isArray(v.images) && v.images.length > 0
+      ? (v.images.map(resolveApiAssetUrl).filter(Boolean) as string[])
+      : v.image
+        ? [resolveApiAssetUrl(v.image) as string]
+        : [];
+
+  const mainImage = resolveApiAssetUrl(v.image) || normalizedImages[0];
+
+  return ({
   id: v._id || v.id || "",
   name: v.name || "",
   category: v.category || "bike",
   description: v.description,
-  image: v.image,
+  image: mainImage,
+  images: normalizedImages,
   pricePerHour: v.pricePerHour ?? 0,
   pricePerDay: v.pricePerDay ?? 0,
   availability: Boolean(v.availability),
 });
+};
 
 export const adminApi = {
   async analytics(token: string) {
@@ -108,7 +135,7 @@ export const adminApi = {
     const data = await parseJson(res);
     return Array.isArray(data) ? data.map(mapVehicle) : [];
   },
-  async addVehicle(token: string, payload: Omit<Vehicle, "id"> & { imageFile?: File | null }) {
+  async addVehicle(token: string, payload: Omit<Vehicle, "id"> & { imageFiles?: File[] | null }) {
     const form = new FormData();
     form.append("name", payload.name);
     form.append("category", payload.category);
@@ -116,8 +143,8 @@ export const adminApi = {
     form.append("pricePerHour", String(payload.pricePerHour));
     form.append("pricePerDay", String(payload.pricePerDay));
     form.append("availability", String(payload.availability));
-    if (payload.imageFile) {
-      form.append("image", payload.imageFile);
+    if (payload.imageFiles && payload.imageFiles.length > 0) {
+      payload.imageFiles.forEach((file) => form.append("images", file));
     } else if (payload.image) {
       form.append("image", payload.image);
     }
@@ -126,7 +153,7 @@ export const adminApi = {
   async updateVehicle(
     token: string,
     id: string,
-    payload: Partial<Omit<Vehicle, "id">> & { imageFile?: File | null },
+    payload: Partial<Omit<Vehicle, "id">> & { imageFiles?: File[] | null },
   ) {
     const form = new FormData();
     if (payload.name != null) form.append("name", payload.name);
@@ -135,8 +162,8 @@ export const adminApi = {
     if (payload.pricePerHour != null) form.append("pricePerHour", String(payload.pricePerHour));
     if (payload.pricePerDay != null) form.append("pricePerDay", String(payload.pricePerDay));
     if (payload.availability != null) form.append("availability", String(payload.availability));
-    if (payload.imageFile) {
-      form.append("image", payload.imageFile);
+    if (payload.imageFiles && payload.imageFiles.length > 0) {
+      payload.imageFiles.forEach((file) => form.append("images", file));
     } else if (payload.image) {
       form.append("image", payload.image);
     }

@@ -10,6 +10,8 @@ import adminRoutes from "./routes/adminRoutes.js";
 import messageRoutes from "./routes/messageRoutes.js";
 import { notFound, errorHandler } from "./middleware/errorHandler.js";
 import path from "path";
+import fs from "fs";
+import { legacyUploadsDir, uploadsDir } from "./utils/paths.js";
 
 const app = express();
 
@@ -48,7 +50,12 @@ app.get("/health", (req, res) => {
   res.status(200).json({ status: "ok" });
 });
 
-app.use("/uploads", express.static(path.resolve("backend", "uploads")));
+const primaryUploadsDir = uploadsDir();
+const legacyDir = legacyUploadsDir();
+app.use("/uploads", express.static(primaryUploadsDir));
+if (legacyDir !== primaryUploadsDir && fs.existsSync(legacyDir)) {
+  app.use("/uploads", express.static(legacyDir));
+}
 
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);

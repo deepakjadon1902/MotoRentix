@@ -6,6 +6,7 @@ const vehicleSchema = new mongoose.Schema(
     category: { type: String, enum: ["bike", "scooter"], required: true },
     description: { type: String },
     image: { type: String },
+    images: { type: [String], default: [] },
     pricePerHour: { type: Number, required: true },
     pricePerDay: { type: Number, required: true },
     availability: { type: Boolean, default: true },

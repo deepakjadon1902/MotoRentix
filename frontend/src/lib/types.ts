@@ -6,6 +6,7 @@ export interface Vehicle {
   category: VehicleCategory;
   description?: string;
   image?: string;
+  images?: string[];
   pricePerHour: number;
   pricePerDay: number;
   availability: boolean;
@@ -16,6 +17,7 @@ export interface VehicleSummary {
   name: string;
   category: VehicleCategory;
   image?: string;
+  images?: string[];
   pricePerHour?: number;
   pricePerDay?: number;
 }

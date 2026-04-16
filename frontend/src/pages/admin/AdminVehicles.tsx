@@ -10,6 +10,7 @@ const emptyForm: VehicleForm = {
   category: "bike",
   description: "",
   image: "",
+  images: [],
   pricePerHour: 0,
   pricePerDay: 0,
   availability: true,
@@ -19,7 +20,8 @@ const AdminVehicles = () => {
   const token = useAdminStore((s) => s.token);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [form, setForm] = useState<VehicleForm>(emptyForm);
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -43,16 +45,24 @@ const AdminVehicles = () => {
     loadVehicles();
   }, [loadVehicles]);
 
+  useEffect(() => {
+    const urls = imageFiles.map((file) => URL.createObjectURL(file));
+    setPreviewUrls(urls);
+    return () => {
+      urls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [imageFiles]);
+
   const submit = async () => {
     if (!token) return;
     try {
       if (editingId) {
-        await adminApi.updateVehicle(token, editingId, { ...form, imageFile });
+        await adminApi.updateVehicle(token, editingId, { ...form, imageFiles });
       } else {
-        await adminApi.addVehicle(token, { ...form, imageFile });
+        await adminApi.addVehicle(token, { ...form, imageFiles });
       }
       setForm(emptyForm);
-      setImageFile(null);
+      setImageFiles([]);
       setEditingId(null);
       await loadVehicles();
     } catch (e: unknown) {
@@ -67,11 +77,12 @@ const AdminVehicles = () => {
       category: v.category,
       description: v.description || "",
       image: v.image || "",
+      images: v.images || (v.image ? [v.image] : []),
       pricePerHour: v.pricePerHour,
       pricePerDay: v.pricePerDay,
       availability: v.availability,
     });
-    setImageFile(null);
+    setImageFiles([]);
   };
 
   const onDelete = async (id: string) => {
@@ -121,7 +132,8 @@ const AdminVehicles = () => {
             className="w-full px-4 py-3 rounded-lg bg-secondary text-foreground border border-border focus:outline-none focus:ring-2 focus:ring-primary text-sm"
             type="file"
             accept="image/*"
-            onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+            multiple
+            onChange={(e) => setImageFiles(Array.from(e.target.files || []))}
           />
           <input
             className="w-full px-4 py-3 rounded-lg bg-secondary text-foreground border border-border focus:outline-none focus:ring-2 focus:ring-primary text-sm"
@@ -153,9 +165,35 @@ const AdminVehicles = () => {
           value={form.description}
           onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
         />
-        {form.image && !imageFile && (
-          <p className="text-xs text-muted-foreground">Current image: {form.image}</p>
-        )}
+        <div className="space-y-2">
+          <p className="text-xs text-muted-foreground">Upload up to 10 images. First image becomes the main listing image.</p>
+          {previewUrls.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {previewUrls.slice(0, 10).map((url, idx) => (
+                <img
+                  key={url}
+                  src={url}
+                  alt={`Preview ${idx + 1}`}
+                  className="h-16 w-20 rounded-lg object-cover border border-border/60"
+                />
+              ))}
+            </div>
+          ) : (
+            form.images &&
+            form.images.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {form.images.slice(0, 10).map((url, idx) => (
+                  <img
+                    key={`${url}-${idx}`}
+                    src={url}
+                    alt={`Current ${idx + 1}`}
+                    className="h-16 w-20 rounded-lg object-cover border border-border/60"
+                  />
+                ))}
+              </div>
+            )
+          )}
+        </div>
         <div className="flex items-center gap-3">
           <button
             onClick={submit}
@@ -169,7 +207,7 @@ const AdminVehicles = () => {
               onClick={() => {
                 setEditingId(null);
                 setForm(emptyForm);
-                setImageFile(null);
+                setImageFiles([]);
               }}
               className="px-5 py-2 rounded-lg border border-border text-foreground"
             >

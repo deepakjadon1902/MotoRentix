@@ -38,6 +38,8 @@ const Profile = () => {
     }
   }, [user]);
 
+  const firstName = useMemo(() => (user?.name ? user.name.split(" ")[0] : ""), [user?.name]);
+
   if (!isAuthenticated || !user) {
     return (
       <div className="section-padding min-h-screen flex items-center justify-center">
@@ -52,7 +54,6 @@ const Profile = () => {
   }
 
   const totalSpent = bookings.reduce((sum, b) => sum + b.totalPrice, 0);
-  const firstName = useMemo(() => user.name.split(" ")[0], [user.name]);
 
   const handleSave = async () => {
     const result = await updateProfile({

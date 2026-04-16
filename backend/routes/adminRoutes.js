@@ -20,8 +20,14 @@ const router = Router();
 router.post("/login", adminLogin);
 router.post("/google", adminGoogleLogin);
 
-router.post("/vehicle", requireAuth, requireAdmin, upload.single("image"), addVehicle);
-router.put("/vehicle/:id", requireAuth, requireAdmin, upload.single("image"), updateVehicle);
+const vehicleUpload = upload.fields([
+  { name: "images", maxCount: 10 },
+  // Backward-compatible single image field
+  { name: "image", maxCount: 1 },
+]);
+
+router.post("/vehicle", requireAuth, requireAdmin, vehicleUpload, addVehicle);
+router.put("/vehicle/:id", requireAuth, requireAdmin, vehicleUpload, updateVehicle);
 router.delete("/vehicle/:id", requireAuth, requireAdmin, deleteVehicle);
 
 router.get("/users", requireAuth, requireAdmin, listUsers);

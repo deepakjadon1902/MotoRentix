@@ -1,5 +1,6 @@
 import type { Booking, UserMessage, UserProfile, Vehicle } from "@/lib/types";
 import { API_BASE_URL } from "@/lib/apiBase";
+import { resolveApiAssetUrl } from "@/lib/assetUrl";
 
 type VehicleDto = {
   _id?: string;
@@ -8,6 +9,7 @@ type VehicleDto = {
   category?: "bike" | "scooter";
   description?: string;
   image?: string;
+  images?: string[];
   pricePerHour?: number;
   pricePerDay?: number;
   availability?: boolean;
@@ -66,16 +68,28 @@ const request = async <T>(
   return data as T;
 };
 
-const mapVehicle = (v: VehicleDto): Vehicle => ({
+const mapVehicle = (v: VehicleDto): Vehicle => {
+  const normalizedImages =
+    Array.isArray(v.images) && v.images.length > 0
+      ? (v.images.map(resolveApiAssetUrl).filter(Boolean) as string[])
+      : v.image
+        ? [resolveApiAssetUrl(v.image) as string]
+        : [];
+
+  const mainImage = resolveApiAssetUrl(v.image) || normalizedImages[0];
+
+  return ({
   id: v._id || v.id || "",
   name: v.name || "",
   category: v.category || "bike",
   description: v.description,
-  image: v.image,
+  image: mainImage,
+  images: normalizedImages,
   pricePerHour: v.pricePerHour ?? 0,
   pricePerDay: v.pricePerDay ?? 0,
   availability: Boolean(v.availability),
 });
+};
 
 export const api = {
   async register(payload: {
@@ -140,7 +154,22 @@ export const api = {
             ? b.vehicleName || "Vehicle"
             : b.vehicleId?.name || b.vehicleName || "Vehicle",
         category: typeof b.vehicleId === "string" ? undefined : b.vehicleId?.category,
-        image: typeof b.vehicleId === "string" ? undefined : b.vehicleId?.image,
+        images: (() => {
+          if (typeof b.vehicleId === "string") return undefined;
+          const dto = b.vehicleId as VehicleDto | undefined;
+          if (Array.isArray(dto?.images) && dto.images.length > 0) {
+            return dto.images.map(resolveApiAssetUrl).filter(Boolean) as string[];
+          }
+          return dto?.image ? [resolveApiAssetUrl(dto.image) as string] : [];
+        })(),
+        image: (() => {
+          if (typeof b.vehicleId === "string") return undefined;
+          const dto = b.vehicleId as VehicleDto | undefined;
+          const img = resolveApiAssetUrl(dto?.image);
+          if (img) return img;
+          const images = Array.isArray(dto?.images) ? (dto?.images || []).map(resolveApiAssetUrl).filter(Boolean) as string[] : [];
+          return images[0];
+        })(),
         pricePerHour: typeof b.vehicleId === "string" ? undefined : b.vehicleId?.pricePerHour,
         pricePerDay: typeof b.vehicleId === "string" ? undefined : b.vehicleId?.pricePerDay,
       },

@@ -54,7 +54,7 @@ export const createBooking = asyncHandler(async (req, res) => {
 
 export const listUserBookings = asyncHandler(async (req, res) => {
   const bookings = await Booking.find({ userId: req.user.id })
-    .populate("vehicleId", "name category image pricePerHour pricePerDay")
+    .populate("vehicleId", "name category image images pricePerHour pricePerDay")
     .sort({ createdAt: -1 });
   res.json(bookings);
 });

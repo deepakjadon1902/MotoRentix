@@ -3,7 +3,15 @@ import asyncHandler from "../middleware/asyncHandler.js";
 
 export const listVehicles = asyncHandler(async (req, res) => {
   const vehicles = await Vehicle.find().sort({ createdAt: -1 });
-  res.json(vehicles);
+  res.json(
+    vehicles.map((v) => {
+      const obj = v.toObject();
+      if ((!Array.isArray(obj.images) || obj.images.length === 0) && obj.image) {
+        obj.images = [obj.image];
+      }
+      return obj;
+    })
+  );
 });
 
 export const getVehicleById = asyncHandler(async (req, res) => {
@@ -11,5 +19,9 @@ export const getVehicleById = asyncHandler(async (req, res) => {
   if (!vehicle) {
     return res.status(404).json({ message: "Vehicle not found" });
   }
-  res.json(vehicle);
+  const obj = vehicle.toObject();
+  if ((!Array.isArray(obj.images) || obj.images.length === 0) && obj.image) {
+    obj.images = [obj.image];
+  }
+  res.json(obj);
 });

@@ -74,7 +74,19 @@ export const adminGoogleLogin = asyncHandler(async (req, res) => {
 
 export const addVehicle = asyncHandler(async (req, res) => {
   const { name, category, description, pricePerHour, pricePerDay, availability } = req.body;
-  const image = req.file ? `/uploads/${req.file.filename}` : req.body.image;
+
+  const files = req.files && typeof req.files === "object" ? req.files : {};
+  const pickFiles = (key) => (Array.isArray(files[key]) ? files[key] : []);
+  const uploaded = [
+    ...pickFiles("images"),
+    ...pickFiles("image"),
+  ]
+    .filter(Boolean)
+    .map((file) => `/uploads/${file.filename}`);
+
+  const fallbackImage = typeof req.body.image === "string" ? req.body.image : "";
+  const images = uploaded.length > 0 ? uploaded : fallbackImage ? [fallbackImage] : [];
+  const image = uploaded[0] || fallbackImage;
   if (!name || !category || pricePerHour == null || pricePerDay == null) {
     return res.status(400).json({ message: "Name, category, pricePerHour, and pricePerDay are required" });
   }
@@ -84,6 +96,7 @@ export const addVehicle = asyncHandler(async (req, res) => {
     category,
     description,
     image,
+    images,
     pricePerHour,
     pricePerDay,
     availability,
@@ -98,10 +111,31 @@ export const updateVehicle = asyncHandler(async (req, res) => {
     return res.status(404).json({ message: "Vehicle not found" });
   }
 
-  if (req.file) {
-    vehicle.image = `/uploads/${req.file.filename}`;
+  const files = req.files && typeof req.files === "object" ? req.files : {};
+  const pickFiles = (key) => (Array.isArray(files[key]) ? files[key] : []);
+  const uploaded = [
+    ...pickFiles("images"),
+    ...pickFiles("image"),
+  ]
+    .filter(Boolean)
+    .map((file) => `/uploads/${file.filename}`);
+
+  const updates = { ...req.body };
+  if (uploaded.length > 0) {
+    delete updates.image;
+    delete updates.images;
   }
-  Object.assign(vehicle, req.body);
+  Object.assign(vehicle, updates);
+
+  if (uploaded.length > 0) {
+    vehicle.images = uploaded;
+    vehicle.image = uploaded[0];
+  } else {
+    // Backward compatibility: if old doc only has `image`, expose at least one image.
+    if (Array.isArray(vehicle.images) && vehicle.images.length === 0 && vehicle.image) {
+      vehicle.images = [vehicle.image];
+    }
+  }
   await vehicle.save();
 
   res.json(vehicle);
