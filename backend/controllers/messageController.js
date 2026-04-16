@@ -14,3 +14,9 @@ export const createMessage = asyncHandler(async (req, res) => {
 
   res.status(201).json(created);
 });
+
+export const listUserMessages = asyncHandler(async (req, res) => {
+  const messages = await Message.find({ userId: req.user.id })
+    .sort({ createdAt: -1 });
+  res.json(messages);
+});

@@ -1,4 +1,4 @@
-import type { Booking, UserProfile, Vehicle } from "@/lib/types";
+import type { Booking, UserMessage, UserProfile, Vehicle } from "@/lib/types";
 
 type VehicleDto = {
   _id?: string;
@@ -22,6 +22,14 @@ type BookingDto = {
   endDate?: string;
   totalPrice?: number;
   status?: "pending" | "confirmed" | "completed";
+  createdAt?: string;
+};
+
+type MessageDto = {
+  _id?: string;
+  id?: string;
+  message?: string;
+  adminReply?: string;
   createdAt?: string;
 };
 
@@ -86,8 +94,24 @@ export const api = {
   async login(payload: { email: string; password: string }): Promise<{ token: string; user: UserProfile }> {
     return request("/auth/login", { method: "POST", body: JSON.stringify(payload) });
   },
+  async googleLogin(credential: string): Promise<{ token: string; user: UserProfile }> {
+    return request("/auth/google", { method: "POST", body: JSON.stringify({ credential }) });
+  },
   async profile(token: string): Promise<UserProfile> {
     return request("/users/profile", { token });
+  },
+  async updateProfile(
+    token: string,
+    payload: {
+      name?: string;
+      dob?: string;
+      address?: string;
+      city?: string;
+      pincode?: string;
+      aadhaarNumber?: string;
+    }
+  ): Promise<UserProfile> {
+    return request("/users/profile", { method: "PUT", token, body: JSON.stringify(payload) });
   },
   async listVehicles(): Promise<Vehicle[]> {
     const data = await request<VehicleDto[]>("/vehicles");
@@ -129,6 +153,15 @@ export const api = {
       createdAt: b.createdAt,
     }));
   },
+  async listMessages(token: string): Promise<UserMessage[]> {
+    const data = await request<MessageDto[]>("/messages", { token });
+    return data.map((m) => ({
+      id: m._id || m.id || "",
+      message: m.message || "",
+      adminReply: m.adminReply || "",
+      createdAt: m.createdAt,
+    }));
+  },
   async sendMessage(token: string, message: string): Promise<void> {
     await request("/messages", {
       method: "POST",
@@ -144,5 +177,8 @@ export const api = {
     monthlyRevenue: number;
   }> {
     return request("/admin/analytics", { token });
+  },
+  async googleConfig(): Promise<{ clientId: string }> {
+    return request("/config/google");
   },
 };

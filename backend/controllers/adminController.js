@@ -4,6 +4,7 @@ import Booking from "../models/Booking.js";
 import Message from "../models/Message.js";
 import asyncHandler from "../middleware/asyncHandler.js";
 import { generateToken } from "../utils/jwt.js";
+import { verifyGoogleIdToken } from "../utils/googleAuth.js";
 
 export const adminLogin = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
@@ -22,6 +23,39 @@ export const adminLogin = asyncHandler(async (req, res) => {
   const ok = await user.comparePassword(password);
   if (!ok) {
     return res.status(401).json({ message: "Invalid credentials" });
+  }
+
+  const token = generateToken(user);
+
+  res.json({
+    token,
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      status: user.status,
+    },
+  });
+});
+
+export const adminGoogleLogin = asyncHandler(async (req, res) => {
+  const { credential } = req.body;
+  if (!credential) {
+    return res.status(400).json({ message: "Google credential is required" });
+  }
+
+  const { email, emailVerified } = await verifyGoogleIdToken(credential);
+  if (!emailVerified) {
+    return res.status(403).json({ message: "Google account email is not verified" });
+  }
+
+  const user = await User.findOne({ email });
+  if (!user || user.role !== "admin") {
+    return res.status(401).json({ message: "Invalid admin account" });
+  }
+  if (user.status === "blocked") {
+    return res.status(403).json({ message: "Admin is blocked" });
   }
 
   const token = generateToken(user);

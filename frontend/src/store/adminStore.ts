@@ -12,6 +12,8 @@ interface AdminState {
   user: AdminUser | null;
   isAdminAuthenticated: boolean;
   login: (email: string, password: string) => Promise<{ ok: boolean; message?: string }>;
+  loginWithGoogle: (credential: string) => Promise<{ ok: boolean; message?: string }>;
+  setSession: (token: string, user: AdminUser) => void;
   logout: () => void;
 }
 
@@ -74,6 +76,41 @@ export const useAdminStore = create<AdminState>((set) => ({
       const raw = err instanceof Error ? err.message : 'Login failed';
       return { ok: false, message: normalizeErrorMessage(raw) };
     }
+  },
+  loginWithGoogle: async (credential: string) => {
+    try {
+      const res = await fetch("/api/admin/google", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ credential }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const message =
+          typeof data === "object" && data && "message" in data
+            ? (data as { message?: string }).message || "Google login failed"
+            : "Google login failed";
+        return { ok: false, message: normalizeErrorMessage(message) };
+      }
+
+      const token = data.token as string;
+      const user = data.user as AdminUser;
+
+      localStorage.setItem(tokenKey, token);
+      localStorage.setItem(userKey, JSON.stringify(user));
+
+      set({ token, user, isAdminAuthenticated: true });
+      return { ok: true };
+    } catch (err) {
+      const raw = err instanceof Error ? err.message : "Google login failed";
+      return { ok: false, message: normalizeErrorMessage(raw) };
+    }
+  },
+  setSession: (token: string, user: AdminUser) => {
+    localStorage.setItem(tokenKey, token);
+    localStorage.setItem(userKey, JSON.stringify(user));
+    set({ token, user, isAdminAuthenticated: true });
   },
   logout: () => {
     localStorage.removeItem(tokenKey);

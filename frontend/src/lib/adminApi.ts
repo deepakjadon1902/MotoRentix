@@ -26,7 +26,7 @@ export type AdminBooking = {
 export type AdminMessage = {
   _id?: string;
   id?: string;
-  userId?: { name?: string; email?: string };
+  userId?: { _id?: string; id?: string; name?: string; email?: string };
   message?: string;
   adminReply?: string;
   createdAt?: string;
@@ -45,12 +45,15 @@ const parseJson = async (res: Response) => {
 };
 
 const request = async <T>(path: string, token: string, options: RequestInit = {}): Promise<T> => {
+  const isJsonBody = typeof options.body === "string";
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    ...(isJsonBody ? { "Content-Type": "application/json" } : {}),
+    ...(options.headers || {}),
+  };
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      ...(options.headers || {}),
-    },
+    headers,
   });
 
   const data = await parseJson(res);

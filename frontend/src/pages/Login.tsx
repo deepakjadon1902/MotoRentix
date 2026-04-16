@@ -6,11 +6,13 @@ import { useStore } from '@/store/useStore';
 import { toast } from 'sonner';
 import logo from '@/assets/logo.jpeg';
 import bikeHero from '@/assets/hero-bike-2.jpg';
+import GoogleButton from '@/components/auth/GoogleButton';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const { login } = useStore();
   const navigate = useNavigate();
 
@@ -29,6 +31,8 @@ const Login = () => {
       toast.error(message);
     }
   };
+
+  const googleHref = `/api/auth/google?role=user&next=${encodeURIComponent("/profile")}`;
 
   return (
     <div className="min-h-screen relative flex items-center justify-center section-padding bg-secondary overflow-hidden">
@@ -108,6 +112,17 @@ const Login = () => {
               Login
             </button>
           </form>
+
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-border/60" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase tracking-[0.2em]">
+              <span className="bg-background/80 px-3 text-muted-foreground">or</span>
+            </div>
+          </div>
+
+          <GoogleButton href={googleHref} disabled={googleLoading} />
 
           <p className="text-sm text-center md:text-left text-muted-foreground mt-6">
             Don't have an account?{' '}

@@ -1,18 +1,42 @@
-import { useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { User, Mail, MapPin, Calendar, Hash, IndianRupee, Bookmark } from "lucide-react";
 import { useStore } from "@/store/useStore";
+import { toast } from "sonner";
 
 const Profile = () => {
-  const { user, bookings, isAuthenticated, loadProfile, loadBookings } = useStore();
+  const { user, bookings, messages, isAuthenticated, loadProfile, loadBookings, loadMessages, updateProfile } = useStore();
+  const [isEditing, setIsEditing] = useState(false);
+  const [form, setForm] = useState({
+    name: "",
+    dob: "",
+    address: "",
+    city: "",
+    pincode: "",
+    aadhaarNumber: "",
+  });
 
   useEffect(() => {
     if (isAuthenticated) {
       loadProfile();
       loadBookings();
+      loadMessages();
     }
-  }, [isAuthenticated, loadProfile, loadBookings]);
+  }, [isAuthenticated, loadProfile, loadBookings, loadMessages]);
+
+  useEffect(() => {
+    if (user) {
+      setForm({
+        name: user.name || "",
+        dob: user.dob || "",
+        address: user.address || "",
+        city: user.city || "",
+        pincode: user.pincode || "",
+        aadhaarNumber: user.aadhaarNumber || "",
+      });
+    }
+  }, [user]);
 
   if (!isAuthenticated || !user) {
     return (
@@ -28,13 +52,32 @@ const Profile = () => {
   }
 
   const totalSpent = bookings.reduce((sum, b) => sum + b.totalPrice, 0);
+  const firstName = useMemo(() => user.name.split(" ")[0], [user.name]);
+
+  const handleSave = async () => {
+    const result = await updateProfile({
+      name: form.name,
+      dob: form.dob,
+      address: form.address,
+      city: form.city,
+      pincode: form.pincode,
+      aadhaarNumber: form.aadhaarNumber,
+    });
+
+    if (result.ok) {
+      toast.success("Profile updated");
+      setIsEditing(false);
+    } else {
+      toast.error(result.message || "Profile update failed");
+    }
+  };
 
   return (
     <div className="section-padding bg-background min-h-screen">
       <div className="container mx-auto max-w-4xl">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
           <h1 className="font-heading text-3xl md:text-4xl font-bold text-foreground">
-            Welcome back, <span className="text-gradient-primary">{user.name.split(" ")[0]}</span>
+            Welcome back, <span className="text-gradient-primary">{firstName}</span>
           </h1>
           <p className="text-muted-foreground mt-2">Manage your account and view your stats</p>
         </motion.div>
@@ -76,28 +119,129 @@ const Profile = () => {
           transition={{ delay: 0.3 }}
           className="glass rounded-2xl p-6 mb-8"
         >
-          <h2 className="font-heading text-xl font-bold text-foreground mb-5">Personal Information</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            {[
-              { icon: User, label: "Name", value: user.name },
-              { icon: Mail, label: "Email", value: user.email },
-              { icon: Calendar, label: "Date of Birth", value: user.dob },
-              { icon: MapPin, label: "Address", value: user.address },
-              { icon: MapPin, label: "City", value: user.city },
-              { icon: Hash, label: "Pincode", value: user.pincode },
-              { icon: Hash, label: "Aadhaar", value: user.aadhaarNumber },
-            ].map((item) => (
-              <div key={item.label} className="flex items-start gap-3">
-                <div className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center shrink-0 mt-0.5">
-                  <item.icon size={16} className="text-muted-foreground" />
-                </div>
-                <div>
-                  <span className="text-xs text-muted-foreground">{item.label}</span>
-                  <p className="text-sm font-medium text-foreground">{item.value || "-"}</p>
-                </div>
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="font-heading text-xl font-bold text-foreground">Personal Information</h2>
+            {!isEditing ? (
+              <button
+                type="button"
+                onClick={() => setIsEditing(true)}
+                className="text-sm font-medium text-primary hover:underline"
+              >
+                Edit Profile
+              </button>
+            ) : (
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEditing(false);
+                    setForm({
+                      name: user.name || "",
+                      dob: user.dob || "",
+                      address: user.address || "",
+                      city: user.city || "",
+                      pincode: user.pincode || "",
+                      aadhaarNumber: user.aadhaarNumber || "",
+                    });
+                  }}
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  className="btn-primary-gradient px-4 py-2 rounded-lg text-primary-foreground text-sm font-semibold"
+                >
+                  Save
+                </button>
               </div>
-            ))}
+            )}
           </div>
+
+          {!isEditing ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              {[
+                { icon: User, label: "Name", value: user.name },
+                { icon: Mail, label: "Email", value: user.email },
+                { icon: Calendar, label: "Date of Birth", value: user.dob },
+                { icon: MapPin, label: "Address", value: user.address },
+                { icon: MapPin, label: "City", value: user.city },
+                { icon: Hash, label: "Pincode", value: user.pincode },
+                { icon: Hash, label: "Aadhaar", value: user.aadhaarNumber },
+              ].map((item) => (
+                <div key={item.label} className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center shrink-0 mt-0.5">
+                    <item.icon size={16} className="text-muted-foreground" />
+                  </div>
+                  <div>
+                    <span className="text-xs text-muted-foreground">{item.label}</span>
+                    <p className="text-sm font-medium text-foreground">{item.value || "-"}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="sm:col-span-2">
+                <label className="block text-xs text-muted-foreground mb-1">Name</label>
+                <input
+                  value={form.name}
+                  onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+                  className="w-full rounded-lg border border-border bg-secondary/60 px-4 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1">Email</label>
+                <input
+                  value={user.email}
+                  disabled
+                  className="w-full rounded-lg border border-border bg-secondary/40 px-4 py-2 text-sm text-muted-foreground"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1">Date of Birth</label>
+                <input
+                  type="date"
+                  value={form.dob}
+                  onChange={(e) => setForm((prev) => ({ ...prev, dob: e.target.value }))}
+                  className="w-full rounded-lg border border-border bg-secondary/60 px-4 py-2 text-sm"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block text-xs text-muted-foreground mb-1">Address</label>
+                <input
+                  value={form.address}
+                  onChange={(e) => setForm((prev) => ({ ...prev, address: e.target.value }))}
+                  className="w-full rounded-lg border border-border bg-secondary/60 px-4 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1">City</label>
+                <input
+                  value={form.city}
+                  onChange={(e) => setForm((prev) => ({ ...prev, city: e.target.value }))}
+                  className="w-full rounded-lg border border-border bg-secondary/60 px-4 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1">Pincode</label>
+                <input
+                  value={form.pincode}
+                  onChange={(e) => setForm((prev) => ({ ...prev, pincode: e.target.value }))}
+                  className="w-full rounded-lg border border-border bg-secondary/60 px-4 py-2 text-sm"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block text-xs text-muted-foreground mb-1">Aadhaar Number</label>
+                <input
+                  value={form.aadhaarNumber}
+                  onChange={(e) => setForm((prev) => ({ ...prev, aadhaarNumber: e.target.value }))}
+                  className="w-full rounded-lg border border-border bg-secondary/60 px-4 py-2 text-sm"
+                />
+              </div>
+            </div>
+          )}
         </motion.div>
 
         {bookings.length > 0 && (
@@ -152,6 +296,36 @@ const Profile = () => {
             </div>
           </motion.div>
         )}
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="glass rounded-2xl p-6"
+        >
+          <h2 className="font-heading text-xl font-bold text-foreground mb-4">Support Messages</h2>
+          {messages.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No messages yet.</p>
+          ) : (
+            <div className="space-y-4">
+              {messages.map((m) => (
+                <div key={m.id} className="rounded-xl border border-border bg-background/80 p-4 space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    {m.createdAt ? m.createdAt.split("T")[0] : ""}
+                  </p>
+                  <p className="text-sm text-foreground">{m.message}</p>
+                  {m.adminReply ? (
+                    <div className="rounded-lg bg-secondary p-3 text-sm text-foreground">
+                      Admin reply: {m.adminReply}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">Awaiting admin reply...</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </motion.div>
       </div>
     </div>
   );

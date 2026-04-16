@@ -14,17 +14,13 @@ import Contact from "@/pages/Contact";
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
 import NotFound from "@/pages/NotFound";
+import AuthCallback from "@/pages/AuthCallback";
 import AdminLogin from "@/pages/admin/AdminLogin";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import AdminVehicles from "@/pages/admin/AdminVehicles";
 import AdminUsers from "@/pages/admin/AdminUsers";
 import AdminBookings from "@/pages/admin/AdminBookings";
-import AdminAnalytics from "@/pages/admin/AdminAnalytics";
 import AdminMessages from "@/pages/admin/AdminMessages";
-import AdminUsersDetail from "@/pages/admin/AdminUsersDetail";
-import AdminActiveUsersDetail from "@/pages/admin/AdminActiveUsersDetail";
-import AdminVehiclesDetail from "@/pages/admin/AdminVehiclesDetail";
-import AdminRevenueDetail from "@/pages/admin/AdminRevenueDetail";
 import AdminLayout from "@/layouts/AdminLayout";
 import AdminGuard from "@/components/admin/AdminGuard";
 
@@ -48,6 +44,7 @@ const App = () => (
           </Route>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route element={<AdminGuard />}>
             <Route path="/admin" element={<AdminLayout />}>
@@ -55,11 +52,6 @@ const App = () => (
               <Route path="vehicles" element={<AdminVehicles />} />
               <Route path="users" element={<AdminUsers />} />
               <Route path="bookings" element={<AdminBookings />} />
-              <Route path="analytics" element={<AdminAnalytics />} />
-              <Route path="analytics/users" element={<AdminUsersDetail />} />
-              <Route path="analytics/active-users" element={<AdminActiveUsersDetail />} />
-              <Route path="analytics/vehicles" element={<AdminVehiclesDetail />} />
-              <Route path="analytics/revenue" element={<AdminRevenueDetail />} />
               <Route path="messages" element={<AdminMessages />} />
             </Route>
           </Route>

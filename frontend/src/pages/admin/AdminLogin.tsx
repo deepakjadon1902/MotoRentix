@@ -4,13 +4,14 @@ import { motion } from 'framer-motion';
 import { Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import logo from '@/assets/logo.jpeg';
-import adminHero from '@/assets/hero-scooter-2.jpg';
 import { useAdminStore } from '@/store/adminStore';
+import GoogleButton from '@/components/auth/GoogleButton';
 
 const AdminLogin = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const login = useAdminStore((state) => state.login);
   const navigate = useNavigate();
 
@@ -31,17 +32,19 @@ const AdminLogin = () => {
     }
   };
 
+  const googleHref = `/api/auth/google?role=admin&next=${encodeURIComponent("/admin")}`;
+
   return (
     <div className="min-h-screen relative flex items-center justify-center section-padding bg-background overflow-hidden">
       <div className="absolute inset-0">
-        <img src={adminHero} alt="" className="h-full w-full object-cover opacity-30" />
-        <div className="absolute inset-0 bg-gradient-to-br from-background/95 via-background/80 to-background/90" />
+        <img src="/admin-bg/admin-bike-1.jpg" alt="" className="h-full w-full object-cover" />
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-950/85 via-slate-950/70 to-slate-950/60" />
       </div>
 
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative z-10 w-full max-w-4xl glass rounded-3xl overflow-hidden border border-border/60 grid md:grid-cols-[0.9fr_1.1fr]"
+        className="relative z-10 w-full max-w-4xl glass rounded-3xl overflow-hidden border border-white/20 grid md:grid-cols-[0.9fr_1.1fr]"
       >
         <div className="p-8 md:p-10 bg-background/85">
           <div className="text-center md:text-left mb-6">
@@ -90,12 +93,24 @@ const AdminLogin = () => {
               Login
             </button>
           </form>
+
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-border/60" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase tracking-[0.2em]">
+              <span className="bg-background/85 px-3 text-muted-foreground">or</span>
+            </div>
+          </div>
+
+          <GoogleButton href={googleHref} disabled={googleLoading} />
         </div>
 
         <div
           className="hidden md:flex flex-col justify-between p-10 bg-cover bg-center text-background"
           style={{
-            backgroundImage: `linear-gradient(140deg, rgba(12, 20, 35, 0.9), rgba(12, 20, 35, 0.45)), url(${adminHero})`,
+            backgroundImage:
+              "linear-gradient(140deg, rgba(12, 20, 35, 0.9), rgba(12, 20, 35, 0.45)), url(/admin-bg/admin-bike-2.jpg)",
           }}
         >
           <div className="flex items-center gap-3">

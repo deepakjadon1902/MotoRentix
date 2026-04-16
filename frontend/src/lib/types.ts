@@ -33,6 +33,13 @@ export interface Booking {
   createdAt?: string;
 }
 
+export interface UserMessage {
+  id: string;
+  message: string;
+  adminReply?: string;
+  createdAt?: string;
+}
+
 export interface UserProfile {
   id: string;
   name: string;

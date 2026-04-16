@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   adminLogin,
+  adminGoogleLogin,
   addVehicle,
   updateVehicle,
   deleteVehicle,
@@ -17,6 +18,7 @@ import upload from "../middleware/upload.js";
 const router = Router();
 
 router.post("/login", adminLogin);
+router.post("/google", adminGoogleLogin);
 
 router.post("/vehicle", requireAuth, requireAdmin, upload.single("image"), addVehicle);
 router.put("/vehicle/:id", requireAuth, requireAdmin, upload.single("image"), updateVehicle);

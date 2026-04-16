@@ -5,6 +5,7 @@ import { Eye, EyeOff } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { toast } from 'sonner';
 import logo from '@/assets/logo.jpeg';
+import GoogleButton from '@/components/auth/GoogleButton';
 
 type FormState = {
   name: string;
@@ -31,6 +32,7 @@ const initialForm: FormState = {
 const Register = () => {
   const [form, setForm] = useState<FormState>(initialForm);
   const [showPw, setShowPw] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const { register } = useStore();
   const navigate = useNavigate();
 
@@ -56,6 +58,8 @@ const Register = () => {
       toast.error(message);
     }
   };
+
+  const googleHref = `/api/auth/google?role=user&next=${encodeURIComponent("/profile")}`;
 
   const fields: { key: keyof FormState; label: string; type: string; placeholder: string; half?: boolean }[] = [
     { key: 'name', label: 'Full Name', type: 'text', placeholder: 'John Doe' },
@@ -111,6 +115,17 @@ const Register = () => {
             Create Account
           </button>
         </form>
+
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-border/60" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase tracking-[0.2em]">
+            <span className="bg-secondary px-3 text-muted-foreground">or</span>
+          </div>
+        </div>
+
+        <GoogleButton href={googleHref} disabled={googleLoading} />
 
         <p className="text-sm text-center text-muted-foreground">
           Already have an account?{' '}

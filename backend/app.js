@@ -13,7 +13,27 @@ import path from "path";
 
 const app = express();
 
-app.use(cors());
+const frontendUrls = (process.env.FRONTEND_URLS || "")
+  .split(",")
+  .map((value) => value.trim())
+  .filter(Boolean);
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || frontendUrls.length === 0) {
+        callback(null, true);
+        return;
+      }
+      if (frontendUrls.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(new Error("Not allowed by CORS"), false);
+    },
+    credentials: true,
+  })
+);
 app.use(express.json({ limit: "1mb" }));
 app.use(morgan("dev"));
 
@@ -25,6 +45,12 @@ app.use("/api/vehicles", vehicleRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/messages", messageRoutes);
+
+app.get("/api/config/google", (req, res) => {
+  res.json({
+    clientId: process.env.GOOGLE_CLIENT_ID || "",
+  });
+});
 
 app.use(notFound);
 app.use(errorHandler);
