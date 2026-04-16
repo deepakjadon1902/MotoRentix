@@ -1,4 +1,5 @@
 import type { Booking, UserMessage, UserProfile, Vehicle } from "@/lib/types";
+import { API_BASE_URL } from "@/lib/apiBase";
 
 type VehicleDto = {
   _id?: string;
@@ -33,8 +34,6 @@ type MessageDto = {
   createdAt?: string;
 };
 
-const API_BASE = "/api";
-
 const parseJson = async (res: Response) => {
   const text = await res.text();
   if (!text) return null;
@@ -50,7 +49,7 @@ const request = async <T>(
   options: RequestInit & { token?: string } = {},
 ): Promise<T> => {
   const { token, headers, ...rest } = options;
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await fetch(`${API_BASE_URL}${path}`, {
     ...rest,
     headers: {
       "Content-Type": "application/json",

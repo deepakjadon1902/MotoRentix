@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import logo from '@/assets/logo.jpeg';
 import bikeHero from '@/assets/hero-bike-2.jpg';
 import GoogleButton from '@/components/auth/GoogleButton';
+import { API_BASE_URL } from '@/lib/apiBase';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -32,7 +33,7 @@ const Login = () => {
     }
   };
 
-  const googleHref = `/api/auth/google?role=user&next=${encodeURIComponent("/profile")}`;
+  const googleHref = `${API_BASE_URL}/auth/google?role=user&next=${encodeURIComponent("/profile")}`;
 
   return (
     <div className="min-h-screen relative flex items-center justify-center section-padding bg-secondary overflow-hidden">

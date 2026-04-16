@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import logo from '@/assets/logo.jpeg';
 import { useAdminStore } from '@/store/adminStore';
 import GoogleButton from '@/components/auth/GoogleButton';
+import { API_BASE_URL } from '@/lib/apiBase';
 
 const AdminLogin = () => {
   const [email, setEmail] = useState('');
@@ -32,7 +33,7 @@ const AdminLogin = () => {
     }
   };
 
-  const googleHref = `/api/auth/google?role=admin&next=${encodeURIComponent("/admin")}`;
+  const googleHref = `${API_BASE_URL}/auth/google?role=admin&next=${encodeURIComponent("/admin")}`;
 
   return (
     <div className="min-h-screen relative flex items-center justify-center section-padding bg-background overflow-hidden">

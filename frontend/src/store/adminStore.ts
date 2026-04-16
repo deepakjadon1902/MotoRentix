@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { API_BASE_URL } from "@/lib/apiBase";
 
 export interface AdminUser {
   id: string;
@@ -50,7 +51,7 @@ export const useAdminStore = create<AdminState>((set) => ({
   ...getInitialState(),
   login: async (email: string, password: string) => {
     try {
-      const res = await fetch('/api/admin/login', {
+      const res = await fetch(`${API_BASE_URL}/admin/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -79,7 +80,7 @@ export const useAdminStore = create<AdminState>((set) => ({
   },
   loginWithGoogle: async (credential: string) => {
     try {
-      const res = await fetch("/api/admin/google", {
+      const res = await fetch(`${API_BASE_URL}/admin/google`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ credential }),

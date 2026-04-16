@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Bike, BookOpenCheck, Users, UserCheck, MessageCircle } from "lucide-react";
 import { useAdminStore } from "@/store/adminStore";
+import { API_BASE_URL } from "@/lib/apiBase";
 
 interface Overview {
   vehicleCount: number;
@@ -19,9 +20,9 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     const load = async () => {
-      if (!token) return;
+        if (!token) return;
       try {
-        const res = await fetch("/api/admin/analytics", {
+        const res = await fetch(`${API_BASE_URL}/admin/analytics`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) {

@@ -1,4 +1,5 @@
 import type { Vehicle } from "@/lib/types";
+import { API_BASE_URL } from "@/lib/apiBase";
 
 export type AdminUser = {
   _id?: string;
@@ -32,8 +33,6 @@ export type AdminMessage = {
   createdAt?: string;
 };
 
-const API_BASE = "/api";
-
 const parseJson = async (res: Response) => {
   const text = await res.text();
   if (!text) return null;
@@ -51,7 +50,7 @@ const request = async <T>(path: string, token: string, options: RequestInit = {}
     ...(isJsonBody ? { "Content-Type": "application/json" } : {}),
     ...(options.headers || {}),
   };
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
     headers,
   });
@@ -105,7 +104,7 @@ export const adminApi = {
     return request("/admin/reply", token, { method: "POST", body: JSON.stringify({ messageId, adminReply }) });
   },
   async listVehicles() {
-    const res = await fetch(`${API_BASE}/vehicles`);
+    const res = await fetch(`${API_BASE_URL}/vehicles`);
     const data = await parseJson(res);
     return Array.isArray(data) ? data.map(mapVehicle) : [];
   },
