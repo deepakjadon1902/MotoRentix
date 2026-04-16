@@ -61,7 +61,7 @@ const AuthCallback = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
-      <p className="text-sm text-muted-foreground">Signing you in with Google…</p>
+      <p className="text-sm text-muted-foreground">Signing you in with Google...</p>
     </div>
   );
 };
