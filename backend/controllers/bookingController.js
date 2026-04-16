@@ -22,6 +22,12 @@ export const createBooking = asyncHandler(async (req, res) => {
     return res.status(400).json({ message: "vehicleId, durationType, startDate, endDate are required" });
   }
 
+  const requiredProfileFields = ["phone", "address", "city", "pincode", "aadhaarNumber"];
+  const missing = requiredProfileFields.filter((key) => !req.user?.[key]);
+  if (missing.length > 0) {
+    return res.status(400).json({ message: "Please complete your profile (phone, address, city, pincode, Aadhaar) before booking." });
+  }
+
   if (!["hour", "day"].includes(durationType)) {
     return res.status(400).json({ message: "Invalid durationType" });
   }
@@ -46,7 +52,7 @@ export const createBooking = asyncHandler(async (req, res) => {
     startDate,
     endDate,
     totalPrice,
-    status: "confirmed",
+    status: "pending",
   });
 
   res.status(201).json(booking);

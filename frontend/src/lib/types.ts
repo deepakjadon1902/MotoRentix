@@ -22,7 +22,7 @@ export interface VehicleSummary {
   pricePerDay?: number;
 }
 
-export type BookingStatus = "pending" | "confirmed" | "completed";
+export type BookingStatus = "pending" | "confirmed" | "rejected" | "completed";
 
 export interface Booking {
   id: string;
@@ -46,6 +46,7 @@ export interface UserProfile {
   id: string;
   name: string;
   email: string;
+  phone?: string;
   dob?: string;
   address?: string;
   city?: string;

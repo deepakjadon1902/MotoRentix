@@ -174,10 +174,27 @@ export const updateUserStatus = asyncHandler(async (req, res) => {
 
 export const listBookings = asyncHandler(async (req, res) => {
   const bookings = await Booking.find()
-    .populate("userId", "name email")
+    .populate("userId", "name email phone address city pincode aadhaarNumber")
     .populate("vehicleId", "name category")
     .sort({ createdAt: -1 });
   res.json(bookings);
+});
+
+export const updateBookingStatus = asyncHandler(async (req, res) => {
+  const { status } = req.body;
+  if (!["pending", "confirmed", "rejected", "completed"].includes(status)) {
+    return res.status(400).json({ message: "Invalid status" });
+  }
+
+  const booking = await Booking.findById(req.params.id);
+  if (!booking) {
+    return res.status(404).json({ message: "Booking not found" });
+  }
+
+  booking.status = status;
+  await booking.save();
+
+  res.json({ message: "Booking status updated", booking });
 });
 
 export const analytics = asyncHandler(async (req, res) => {

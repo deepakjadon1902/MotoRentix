@@ -1,5 +1,4 @@
 import type { Vehicle } from "@/lib/types";
-import type { Vehicle } from "@/lib/types";
 import { API_BASE_URL } from "@/lib/apiBase";
 import { resolveApiAssetUrl } from "@/lib/assetUrl";
 
@@ -21,6 +20,11 @@ export type AdminUser = {
   id?: string;
   name?: string;
   email?: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+  pincode?: string;
+  aadhaarNumber?: string;
   role?: "user" | "admin";
   status?: "active" | "blocked";
   createdAt?: string;
@@ -29,13 +33,13 @@ export type AdminUser = {
 export type AdminBooking = {
   _id?: string;
   id?: string;
-  userId?: { name?: string; email?: string };
+  userId?: { name?: string; email?: string; phone?: string; address?: string; city?: string; pincode?: string; aadhaarNumber?: string };
   vehicleId?: { name?: string; category?: string };
   durationType?: "hour" | "day";
   startDate?: string;
   endDate?: string;
   totalPrice?: number;
-  status?: "pending" | "confirmed" | "completed";
+  status?: "pending" | "confirmed" | "rejected" | "completed";
   createdAt?: string;
 };
 
@@ -123,6 +127,16 @@ export const adminApi = {
   },
   async listBookings(token: string) {
     return request<AdminBooking[]>("/admin/bookings", token);
+  },
+  async updateBookingStatus(
+    token: string,
+    bookingId: string,
+    status: "pending" | "confirmed" | "rejected" | "completed",
+  ) {
+    return request<{ message: string }>(`/admin/bookings/${bookingId}/status`, token, {
+      method: "PUT",
+      body: JSON.stringify({ status }),
+    });
   },
   async listMessages(token: string) {
     return request<AdminMessage[]>("/admin/messages", token);

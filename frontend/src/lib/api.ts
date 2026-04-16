@@ -24,7 +24,7 @@ type BookingDto = {
   startDate?: string;
   endDate?: string;
   totalPrice?: number;
-  status?: "pending" | "confirmed" | "completed";
+  status?: "pending" | "confirmed" | "rejected" | "completed";
   createdAt?: string;
 };
 
@@ -96,6 +96,7 @@ export const api = {
     name: string;
     email: string;
     password: string;
+    phone?: string;
     dob?: string;
     address?: string;
     city?: string;
@@ -117,6 +118,7 @@ export const api = {
     token: string,
     payload: {
       name?: string;
+      phone?: string;
       dob?: string;
       address?: string;
       city?: string;

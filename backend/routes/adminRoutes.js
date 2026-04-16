@@ -8,6 +8,7 @@ import {
   listUsers,
   updateUserStatus,
   listBookings,
+  updateBookingStatus,
   analytics,
   listMessages,
   replyMessage,
@@ -34,6 +35,7 @@ router.get("/users", requireAuth, requireAdmin, listUsers);
 router.put("/users/:id/status", requireAuth, requireAdmin, updateUserStatus);
 
 router.get("/bookings", requireAuth, requireAdmin, listBookings);
+router.put("/bookings/:id/status", requireAuth, requireAdmin, updateBookingStatus);
 router.get("/analytics", requireAuth, requireAdmin, analytics);
 
 router.get("/messages", requireAuth, requireAdmin, listMessages);

@@ -28,6 +28,7 @@ interface AppState {
   sendMessage: (message: string) => Promise<boolean>;
   updateProfile: (payload: {
     name?: string;
+    phone?: string;
     dob?: string;
     address?: string;
     city?: string;

@@ -6,6 +6,7 @@ const AdminBookings = () => {
   const token = useAdminStore((s) => s.token);
   const [bookings, setBookings] = useState<AdminBooking[]>([]);
   const [error, setError] = useState("");
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -21,6 +22,22 @@ const AdminBookings = () => {
   useEffect(() => {
     load();
   }, [load]);
+
+  const updateStatus = async (bookingId: string, status: "pending" | "confirmed" | "rejected" | "completed") => {
+    if (!token) return;
+    setUpdatingId(bookingId);
+    try {
+      await adminApi.updateBookingStatus(token, bookingId, status);
+      setBookings((prev) =>
+        prev.map((b) => ((b._id || b.id) === bookingId ? { ...b, status } : b)),
+      );
+      setError("");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to update booking status");
+    } finally {
+      setUpdatingId(null);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -42,10 +59,12 @@ const AdminBookings = () => {
             <thead>
               <tr className="border-b border-border bg-secondary/50">
                 <th className="text-left px-6 py-3 font-medium text-muted-foreground">User</th>
+                <th className="text-left px-6 py-3 font-medium text-muted-foreground">Contact</th>
                 <th className="text-left px-6 py-3 font-medium text-muted-foreground">Vehicle</th>
                 <th className="text-left px-6 py-3 font-medium text-muted-foreground">Duration</th>
                 <th className="text-left px-6 py-3 font-medium text-muted-foreground">Total</th>
                 <th className="text-left px-6 py-3 font-medium text-muted-foreground">Status</th>
+                <th className="text-right px-6 py-3 font-medium text-muted-foreground">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -55,6 +74,15 @@ const AdminBookings = () => {
                     <div className="font-medium text-foreground">{b.userId?.name || "Unknown"}</div>
                     <div className="text-xs text-muted-foreground">{b.userId?.email || ""}</div>
                   </td>
+                  <td className="px-6 py-4 text-xs text-muted-foreground">
+                    <div>{b.userId?.phone || "-"}</div>
+                    <div className="mt-1">
+                      {(b.userId?.address || b.userId?.city || b.userId?.pincode)
+                        ? `${b.userId?.address || ""}${b.userId?.city ? `, ${b.userId.city}` : ""}${b.userId?.pincode ? ` - ${b.userId.pincode}` : ""}`
+                        : "-"}
+                    </div>
+                    <div className="mt-1">Aadhaar: {b.userId?.aadhaarNumber || "-"}</div>
+                  </td>
                   <td className="px-6 py-4 text-muted-foreground">
                     {b.vehicleId?.name || "Vehicle"} ({b.vehicleId?.category || "-"})
                   </td>
@@ -63,15 +91,38 @@ const AdminBookings = () => {
                   </td>
                   <td className="px-6 py-4 text-muted-foreground">INR {b.totalPrice}</td>
                   <td className="px-6 py-4">
-                    <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-primary/10 text-primary">
+                    <span
+                      className={`text-xs font-medium px-2.5 py-1 rounded-full ${
+                        b.status === "confirmed"
+                          ? "bg-primary/10 text-primary"
+                          : b.status === "completed"
+                            ? "bg-success/10 text-success"
+                            : b.status === "rejected"
+                              ? "bg-destructive/10 text-destructive"
+                              : "bg-accent/10 text-accent"
+                      }`}
+                    >
                       {b.status}
                     </span>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <select
+                      value={b.status || "pending"}
+                      onChange={(e) => updateStatus((b._id || b.id) as string, e.target.value as "pending" | "confirmed" | "rejected" | "completed")}
+                      disabled={((!b._id && !b.id) || updatingId === (b._id || b.id))}
+                      className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground disabled:opacity-50"
+                    >
+                      <option value="pending">pending</option>
+                      <option value="confirmed">confirmed</option>
+                      <option value="rejected">rejected</option>
+                      <option value="completed">completed</option>
+                    </select>
                   </td>
                 </tr>
               ))}
               {bookings.length === 0 && (
                 <tr>
-                  <td className="px-6 py-6 text-muted-foreground" colSpan={5}>
+                  <td className="px-6 py-6 text-muted-foreground" colSpan={7}>
                     No bookings found.
                   </td>
                 </tr>

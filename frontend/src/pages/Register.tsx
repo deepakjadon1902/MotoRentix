@@ -11,6 +11,7 @@ import { API_BASE_URL } from '@/lib/apiBase';
 type FormState = {
   name: string;
   email: string;
+  phone: string;
   dob: string;
   password: string;
   address: string;
@@ -22,6 +23,7 @@ type FormState = {
 const initialForm: FormState = {
   name: '',
   email: '',
+  phone: '',
   dob: '',
   password: '',
   address: '',
@@ -65,6 +67,7 @@ const Register = () => {
   const fields: { key: keyof FormState; label: string; type: string; placeholder: string; half?: boolean }[] = [
     { key: 'name', label: 'Full Name', type: 'text', placeholder: 'John Doe' },
     { key: 'email', label: 'Email', type: 'email', placeholder: 'you@example.com' },
+    { key: 'phone', label: 'Phone Number', type: 'tel', placeholder: '9876543210' },
     { key: 'dob', label: 'Date of Birth', type: 'date', placeholder: '', half: true },
     { key: 'password', label: 'Password', type: 'password', placeholder: '••••••••', half: true },
     { key: 'address', label: 'Address', type: 'text', placeholder: '42 MG Road' },

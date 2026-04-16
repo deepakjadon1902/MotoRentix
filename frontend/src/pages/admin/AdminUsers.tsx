@@ -54,6 +54,9 @@ const AdminUsers = () => {
               <tr className="border-b border-border bg-secondary/50">
                 <th className="text-left px-6 py-3 font-medium text-muted-foreground">Name</th>
                 <th className="text-left px-6 py-3 font-medium text-muted-foreground">Email</th>
+                <th className="text-left px-6 py-3 font-medium text-muted-foreground">Phone</th>
+                <th className="text-left px-6 py-3 font-medium text-muted-foreground">Address</th>
+                <th className="text-left px-6 py-3 font-medium text-muted-foreground">Aadhaar</th>
                 <th className="text-left px-6 py-3 font-medium text-muted-foreground">Role</th>
                 <th className="text-left px-6 py-3 font-medium text-muted-foreground">Status</th>
                 <th className="text-right px-6 py-3 font-medium text-muted-foreground">Action</th>
@@ -64,6 +67,13 @@ const AdminUsers = () => {
                 <tr key={u._id || u.id} className="border-b border-border/50 hover:bg-secondary/30">
                   <td className="px-6 py-4 font-medium text-foreground">{u.name}</td>
                   <td className="px-6 py-4 text-muted-foreground">{u.email}</td>
+                  <td className="px-6 py-4 text-muted-foreground">{u.phone || "-"}</td>
+                  <td className="px-6 py-4 text-muted-foreground">
+                    {(u.address || u.city || u.pincode)
+                      ? `${u.address || ""}${u.city ? `, ${u.city}` : ""}${u.pincode ? ` - ${u.pincode}` : ""}`
+                      : "-"}
+                  </td>
+                  <td className="px-6 py-4 text-muted-foreground">{u.aadhaarNumber || "-"}</td>
                   <td className="px-6 py-4 text-muted-foreground">{u.role}</td>
                   <td className="px-6 py-4">
                     <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${u.status === "active" ? "bg-success/10 text-success" : "bg-accent/10 text-accent"}`}>
@@ -84,7 +94,7 @@ const AdminUsers = () => {
               ))}
               {users.length === 0 && (
                 <tr>
-                  <td className="px-6 py-6 text-muted-foreground" colSpan={5}>
+                  <td className="px-6 py-6 text-muted-foreground" colSpan={8}>
                     No users found.
                   </td>
                 </tr>

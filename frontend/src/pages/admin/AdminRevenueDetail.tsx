@@ -27,7 +27,8 @@ const AdminRevenueDetail = () => {
     const start = new Date(now.getFullYear(), now.getMonth(), 1);
     const monthBookings = bookings.filter((b) => {
       const created = b.createdAt ? new Date(b.createdAt) : null;
-      return created && created >= start;
+      const isBillable = b.status === "confirmed" || b.status === "completed";
+      return created && created >= start && isBillable;
     });
     const revenue = monthBookings.reduce((sum, b) => sum + (b.totalPrice || 0), 0);
     return { monthlyBookings: monthBookings, totalRevenue: revenue };

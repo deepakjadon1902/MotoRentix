@@ -7,7 +7,8 @@ import { useStore } from "@/store/useStore";
 const statusConfig = {
   confirmed: { icon: CheckCircle, className: "text-primary bg-primary/10" },
   completed: { icon: AlertCircle, className: "text-success bg-success/10" },
-  pending: { icon: XCircle, className: "text-accent bg-accent/10" },
+  pending: { icon: AlertCircle, className: "text-accent bg-accent/10" },
+  rejected: { icon: XCircle, className: "text-destructive bg-destructive/10" },
 };
 
 const MyBookings = () => {

@@ -28,7 +28,7 @@ const decodeState = (value) => {
 };
 
 export const register = asyncHandler(async (req, res) => {
-  const { name, email, password, dob, address, city, pincode, aadhaarNumber } = req.body;
+  const { name, email, password, phone, dob, address, city, pincode, aadhaarNumber } = req.body;
 
   if (!name || !email || !password) {
     return res.status(400).json({ message: "Name, email, and password are required" });
@@ -44,6 +44,7 @@ export const register = asyncHandler(async (req, res) => {
     name,
     email: normalizedEmail,
     password,
+    phone,
     dob,
     address,
     city,
@@ -61,6 +62,12 @@ export const register = asyncHandler(async (req, res) => {
       id: user.id,
       name: user.name,
       email: user.email,
+      phone: user.phone,
+      dob: user.dob,
+      address: user.address,
+      city: user.city,
+      pincode: user.pincode,
+      aadhaarNumber: user.aadhaarNumber,
       role: user.role,
       status: user.status,
     },
@@ -94,6 +101,12 @@ export const login = asyncHandler(async (req, res) => {
       id: user.id,
       name: user.name,
       email: user.email,
+      phone: user.phone,
+      dob: user.dob,
+      address: user.address,
+      city: user.city,
+      pincode: user.pincode,
+      aadhaarNumber: user.aadhaarNumber,
       role: user.role,
       status: user.status,
     },
@@ -135,6 +148,12 @@ export const googleLogin = asyncHandler(async (req, res) => {
       id: user.id,
       name: user.name,
       email: user.email,
+      phone: user.phone,
+      dob: user.dob,
+      address: user.address,
+      city: user.city,
+      pincode: user.pincode,
+      aadhaarNumber: user.aadhaarNumber,
       role: user.role,
       status: user.status,
     },

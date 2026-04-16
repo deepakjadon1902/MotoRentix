@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { User, Mail, MapPin, Calendar, Hash, IndianRupee, Bookmark } from "lucide-react";
+import { User, Mail, Phone, MapPin, Calendar, Hash, IndianRupee, Bookmark } from "lucide-react";
 import { useStore } from "@/store/useStore";
 import { toast } from "sonner";
 
@@ -10,6 +10,7 @@ const Profile = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [form, setForm] = useState({
     name: "",
+    phone: "",
     dob: "",
     address: "",
     city: "",
@@ -29,6 +30,7 @@ const Profile = () => {
     if (user) {
       setForm({
         name: user.name || "",
+        phone: user.phone || "",
         dob: user.dob || "",
         address: user.address || "",
         city: user.city || "",
@@ -53,11 +55,15 @@ const Profile = () => {
     );
   }
 
-  const totalSpent = bookings.reduce((sum, b) => sum + b.totalPrice, 0);
+  const totalSpent = bookings.reduce(
+    (sum, b) => sum + ((b.status === "confirmed" || b.status === "completed") ? b.totalPrice : 0),
+    0,
+  );
 
   const handleSave = async () => {
     const result = await updateProfile({
       name: form.name,
+      phone: form.phone,
       dob: form.dob,
       address: form.address,
       city: form.city,
@@ -138,6 +144,7 @@ const Profile = () => {
                     setIsEditing(false);
                     setForm({
                       name: user.name || "",
+                      phone: user.phone || "",
                       dob: user.dob || "",
                       address: user.address || "",
                       city: user.city || "",
@@ -165,6 +172,7 @@ const Profile = () => {
               {[
                 { icon: User, label: "Name", value: user.name },
                 { icon: Mail, label: "Email", value: user.email },
+                { icon: Phone, label: "Phone", value: user.phone },
                 { icon: Calendar, label: "Date of Birth", value: user.dob },
                 { icon: MapPin, label: "Address", value: user.address },
                 { icon: MapPin, label: "City", value: user.city },
@@ -189,6 +197,14 @@ const Profile = () => {
                 <input
                   value={form.name}
                   onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+                  className="w-full rounded-lg border border-border bg-secondary/60 px-4 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1">Phone</label>
+                <input
+                  value={form.phone}
+                  onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))}
                   className="w-full rounded-lg border border-border bg-secondary/60 px-4 py-2 text-sm"
                 />
               </div>
@@ -284,6 +300,8 @@ const Profile = () => {
                               ? "bg-primary/10 text-primary"
                               : b.status === "completed"
                                 ? "bg-success/10 text-success"
+                                : b.status === "rejected"
+                                  ? "bg-destructive/10 text-destructive"
                                 : "bg-accent/10 text-accent"
                           }`}
                         >

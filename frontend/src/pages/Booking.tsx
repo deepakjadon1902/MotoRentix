@@ -11,7 +11,7 @@ import VehicleImageGallery from "@/components/VehicleImageGallery";
 const Booking = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { createBooking, isAuthenticated } = useStore();
+  const { createBooking, isAuthenticated, user } = useStore();
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -79,6 +79,13 @@ const Booking = () => {
   }
 
   const handleConfirm = async () => {
+    const missingProfile =
+      !user?.phone || !user?.address || !user?.city || !user?.pincode || !user?.aadhaarNumber;
+    if (missingProfile) {
+      toast.error("Please complete your profile details before booking");
+      navigate("/profile");
+      return;
+    }
     if (!startDate || !endDate || pricing.total <= 0) {
       toast.error("Please select valid dates");
       return;
@@ -90,7 +97,7 @@ const Booking = () => {
       endDate,
     });
     if (ok) {
-      toast.success("Booking confirmed!");
+      toast.success("Booking request sent! Await admin confirmation.");
       navigate("/my-bookings");
     } else {
       toast.error("Booking failed");
@@ -215,12 +222,34 @@ const Booking = () => {
                 </div>
               </div>
 
+              <div className="rounded-2xl border border-border/60 bg-background/60 p-5 space-y-2">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider">Your details</p>
+                <div className="text-sm text-foreground font-medium">{user?.name || "-"}</div>
+                <div className="text-xs text-muted-foreground">{user?.email || "-"}</div>
+                <div className="text-xs text-muted-foreground">Phone: {user?.phone || "-"}</div>
+                <div className="text-xs text-muted-foreground">
+                  Address: {(user?.address || user?.city || user?.pincode)
+                    ? `${user?.address || ""}${user?.city ? `, ${user.city}` : ""}${user?.pincode ? ` - ${user.pincode}` : ""}`
+                    : "-"}
+                </div>
+                <div className="text-xs text-muted-foreground">Aadhaar: {user?.aadhaarNumber || "-"}</div>
+                {(!user?.phone || !user?.address || !user?.city || !user?.pincode || !user?.aadhaarNumber) && (
+                  <button
+                    type="button"
+                    onClick={() => navigate("/profile")}
+                    className="mt-2 text-sm font-medium text-primary hover:underline text-left"
+                  >
+                    Complete profile to book
+                  </button>
+                )}
+              </div>
+
               <button
                 onClick={handleConfirm}
-                disabled={pricing.total <= 0 || !vehicle.availability}
+                disabled={pricing.total <= 0 || !vehicle.availability || !user?.phone || !user?.address || !user?.city || !user?.pincode || !user?.aadhaarNumber}
                 className="w-full btn-primary-gradient py-3.5 rounded-xl font-semibold text-primary-foreground text-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Confirm Booking
+                Request Booking
               </button>
 
               <p className="text-xs text-muted-foreground">

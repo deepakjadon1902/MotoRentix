@@ -14,7 +14,7 @@ export const getUserBookings = asyncHandler(async (req, res) => {
 });
 
 export const updateProfile = asyncHandler(async (req, res) => {
-  const { name, dob, address, city, pincode, aadhaarNumber } = req.body;
+  const { name, phone, dob, address, city, pincode, aadhaarNumber } = req.body;
 
   const user = await User.findById(req.user.id);
   if (!user) {
@@ -22,6 +22,7 @@ export const updateProfile = asyncHandler(async (req, res) => {
   }
 
   if (typeof name === "string") user.name = name.trim() || user.name;
+  if (typeof phone === "string") user.phone = phone;
   if (typeof dob === "string") user.dob = dob;
   if (typeof address === "string") user.address = address;
   if (typeof city === "string") user.city = city;
@@ -34,6 +35,7 @@ export const updateProfile = asyncHandler(async (req, res) => {
     id: user.id,
     name: user.name,
     email: user.email,
+    phone: user.phone,
     dob: user.dob,
     address: user.address,
     city: user.city,
