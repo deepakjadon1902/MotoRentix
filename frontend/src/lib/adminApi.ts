@@ -13,13 +13,40 @@ type VehicleDto = {
   description?: string;
   image?: string;
   images?: string[];
+  features?: string[];
+  engineNumber?: string;
+  chassisNumber?: string;
   pricePerHour?: number;
   pricePerDay?: number;
   pricePerWeek?: number;
+  pricePerMonth?: number;
+  securityDeposit?: number;
   availability?: boolean;
-  status?: "available" | "booked" | "maintenance" | "disabled";
+  status?: "available" | "booked" | "maintenance" | "disabled" | "archived";
   createdAt?: string;
   updatedAt?: string;
+};
+
+export type AdminVehiclePayload = {
+  tenantId?: string;
+  branchId?: string;
+  name: string;
+  bikeNumber?: string;
+  category: Vehicle["category"];
+  description?: string;
+  image?: string;
+  images?: string[];
+  imageFiles?: File[];
+  features?: string[];
+  engineNumber?: string;
+  chassisNumber?: string;
+  pricePerHour: number;
+  pricePerDay: number;
+  pricePerWeek?: number;
+  pricePerMonth?: number;
+  securityDeposit?: number;
+  availability: boolean;
+  status?: NonNullable<Vehicle["status"]>;
 };
 
 export type AdminUser = {
@@ -56,7 +83,7 @@ export type AdminMessage = {
   userId?: { _id?: string; id?: string; name?: string; email?: string; role?: string };
   sentByAdminId?: { _id?: string; id?: string; name?: string; email?: string };
   direction?: "user_to_admin" | "admin_to_user";
-  audience?: "selected" | "users" | "clients" | "collective";
+  audience?: "selected" | "users" | "collective";
   subject?: string;
   message?: string;
   adminReply?: string;
@@ -87,6 +114,19 @@ export type AdminTenant = {
   planId?: AdminPlan;
   subscriptionId?: AdminSubscription;
   status?: "trial" | "active" | "renewal_due" | "expired" | "suspended" | "cancelled" | "blocked_by_admin" | "pending_verification" | "past_due" | "disabled";
+  createdAt?: string;
+};
+
+export type AdminBranch = {
+  _id?: string;
+  id?: string;
+  tenantId?: AdminTenant | string;
+  name?: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+  pincode?: string;
+  status?: "active" | "disabled";
   createdAt?: string;
 };
 
@@ -162,6 +202,22 @@ const request = async <T>(path: string, token: string, options: RequestInit = {}
   return data as T;
 };
 
+const vehicleFormData = (payload: Partial<AdminVehiclePayload>) => {
+  const form = new FormData();
+  Object.entries(payload).forEach(([key, value]) => {
+    if (value === undefined || value === null || key === "imageFiles") return;
+    if (Array.isArray(value)) {
+      if (key === "features" || key === "images") {
+        form.append(key, JSON.stringify(value));
+      }
+      return;
+    }
+    form.append(key, String(value));
+  });
+  (payload.imageFiles || []).forEach((file) => form.append("images", file));
+  return form;
+};
+
 const mapVehicle = (v: VehicleDto): Vehicle => {
   const normalizedImages =
     Array.isArray(v.images) && v.images.length > 0
@@ -182,9 +238,14 @@ const mapVehicle = (v: VehicleDto): Vehicle => {
   description: v.description,
   image: mainImage,
   images: normalizedImages,
+  features: v.features || [],
+  engineNumber: v.engineNumber,
+  chassisNumber: v.chassisNumber,
   pricePerHour: v.pricePerHour ?? 0,
   pricePerDay: v.pricePerDay ?? 0,
   pricePerWeek: v.pricePerWeek ?? 0,
+  pricePerMonth: v.pricePerMonth ?? 0,
+  securityDeposit: v.securityDeposit ?? 0,
   availability: Boolean(v.availability),
   status: v.status,
   createdAt: v.createdAt,
@@ -200,9 +261,6 @@ export const adminApi = {
       totalVehicles: number;
       activeUsers: number;
       monthlyRevenue: number;
-      activeSubscriptions: number;
-      subscriptionRevenue: number;
-      totalTenants: number;
     }>("/admin/analytics", token);
   },
   async listUsers(token: string) {
@@ -237,7 +295,7 @@ export const adminApi = {
   async sendAdminMessage(
     token: string,
     payload: {
-      audience: "selected" | "users" | "clients" | "collective";
+      audience: "selected" | "users" | "collective";
       recipientIds?: string[];
       subject?: string;
       message: string;
@@ -322,5 +380,26 @@ export const adminApi = {
   async listVehicles(token: string) {
     const data = await request<VehicleDto[]>("/admin/vehicles", token);
     return Array.isArray(data) ? data.map(mapVehicle) : [];
+  },
+  async createVehicle(token: string, payload: AdminVehiclePayload) {
+    const data = await request<VehicleDto>("/admin/vehicles", token, {
+      method: "POST",
+      body: vehicleFormData(payload),
+    });
+    return mapVehicle(data);
+  },
+  async updateVehicle(token: string, id: string, payload: Partial<AdminVehiclePayload>) {
+    const data = await request<VehicleDto>(`/admin/vehicles/${id}`, token, {
+      method: "PUT",
+      body: vehicleFormData(payload),
+    });
+    return mapVehicle(data);
+  },
+  async deleteVehicle(token: string, id: string) {
+    return request<{ message: string; archived?: boolean }>(`/admin/vehicles/${id}`, token, { method: "DELETE" });
+  },
+  async listBranches(token: string, tenantId?: string) {
+    const suffix = tenantId ? `?tenantId=${encodeURIComponent(tenantId)}` : "";
+    return request<AdminBranch[]>(`/admin/branches${suffix}`, token);
   },
 };

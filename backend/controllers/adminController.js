@@ -24,6 +24,17 @@ import {
 } from "../utils/subscriptionLifecycle.js";
 import { writeAuditLog } from "../utils/audit.js";
 
+const parseJsonArray = (value) => {
+  if (Array.isArray(value)) return value;
+  if (typeof value !== "string") return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return value.split(",").map((item) => item.trim()).filter(Boolean);
+  }
+};
+
 export const adminLogin = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) {
@@ -91,7 +102,42 @@ export const adminGoogleLogin = asyncHandler(async (req, res) => {
 });
 
 export const addVehicle = asyncHandler(async (req, res) => {
-  const { name, category, description, pricePerHour, pricePerDay, availability } = req.body;
+  const {
+    tenantId,
+    branchId,
+    name,
+    bikeNumber,
+    category,
+    description,
+    features,
+    engineNumber,
+    chassisNumber,
+    pricePerHour,
+    pricePerDay,
+    pricePerWeek,
+    pricePerMonth,
+    securityDeposit,
+    availability = true,
+    status,
+  } = req.body;
+
+  if (!name || !category || pricePerHour == null || pricePerDay == null) {
+    return res.status(400).json({ message: "Name, category, pricePerHour, and pricePerDay are required" });
+  }
+
+  let branch = null;
+  if (branchId) {
+    branch = tenantId ? await Branch.findOne({ _id: branchId, tenantId }) : await Branch.findById(branchId);
+    if (!branch) {
+      return res.status(404).json({ message: "Branch not found" });
+    }
+  } else if (tenantId) {
+    const tenant = await Tenant.findById(tenantId);
+    if (!tenant) {
+      return res.status(404).json({ message: "Tenant not found" });
+    }
+    branch = await Branch.findOne({ tenantId, status: "active" }).sort({ createdAt: 1 });
+  }
 
   const files = req.files && typeof req.files === "object" ? req.files : {};
   const pickFiles = (key) => (Array.isArray(files[key]) ? files[key] : []);
@@ -105,19 +151,26 @@ export const addVehicle = asyncHandler(async (req, res) => {
   const fallbackImage = typeof req.body.image === "string" ? req.body.image : "";
   const images = uploaded.length > 0 ? uploaded : fallbackImage ? [fallbackImage] : [];
   const image = uploaded[0] || fallbackImage;
-  if (!name || !category || pricePerHour == null || pricePerDay == null) {
-    return res.status(400).json({ message: "Name, category, pricePerHour, and pricePerDay are required" });
-  }
 
   const vehicle = await Vehicle.create({
+    tenantId: tenantId || undefined,
+    branchId: branch?._id,
     name,
+    bikeNumber,
     category,
     description,
+    features: parseJsonArray(features),
+    engineNumber,
+    chassisNumber,
     image,
     images,
-    pricePerHour,
-    pricePerDay,
-    availability,
+    pricePerHour: Number(pricePerHour),
+    pricePerDay: Number(pricePerDay),
+    pricePerWeek: Number(pricePerWeek || 0),
+    pricePerMonth: Number(pricePerMonth || 0),
+    securityDeposit: Number(securityDeposit || 0),
+    availability: availability === true || availability === "true",
+    status: status || (availability === false || availability === "false" ? "disabled" : "available"),
   });
 
   res.status(201).json(vehicle);
@@ -138,7 +191,53 @@ export const updateVehicle = asyncHandler(async (req, res) => {
     .filter(Boolean);
   const uploaded = await uploadImageFiles(imageFiles);
 
-  const updates = { ...req.body };
+  const allowed = [
+    "tenantId",
+    "branchId",
+    "name",
+    "bikeNumber",
+    "category",
+    "description",
+    "features",
+    "engineNumber",
+    "chassisNumber",
+    "pricePerHour",
+    "pricePerDay",
+    "pricePerWeek",
+    "pricePerMonth",
+    "securityDeposit",
+    "availability",
+    "status",
+    "image",
+    "images",
+  ];
+  const updates = Object.fromEntries(
+    allowed
+      .filter((key) => req.body[key] !== undefined)
+      .map((key) => [key, req.body[key]])
+  );
+  if (updates.tenantId) {
+    const tenant = await Tenant.findById(updates.tenantId);
+    if (!tenant) {
+      return res.status(404).json({ message: "Tenant not found" });
+    }
+  }
+  if (updates.branchId) {
+    const tenantId = updates.tenantId || vehicle.tenantId;
+    const branch = await Branch.findOne({ _id: updates.branchId, tenantId });
+    if (!branch) {
+      return res.status(404).json({ message: "Branch not found for selected tenant" });
+    }
+  }
+  if (updates.features !== undefined) {
+    updates.features = parseJsonArray(updates.features);
+  }
+  ["pricePerHour", "pricePerDay", "pricePerWeek", "pricePerMonth", "securityDeposit"].forEach((key) => {
+    if (updates[key] !== undefined) updates[key] = Number(updates[key] || 0);
+  });
+  if (updates.availability !== undefined) {
+    updates.availability = updates.availability === true || updates.availability === "true";
+  }
   if (uploaded.length > 0) {
     delete updates.image;
     delete updates.images;
@@ -146,7 +245,8 @@ export const updateVehicle = asyncHandler(async (req, res) => {
   Object.assign(vehicle, updates);
 
   if (uploaded.length > 0) {
-    vehicle.images = uploaded;
+    const existingImages = Array.isArray(vehicle.images) ? vehicle.images : vehicle.image ? [vehicle.image] : [];
+    vehicle.images = [...existingImages, ...uploaded].slice(0, 10);
     vehicle.image = uploaded[0];
   } else {
     // Backward compatibility: if old doc only has `image`, expose at least one image.
@@ -165,8 +265,24 @@ export const deleteVehicle = asyncHandler(async (req, res) => {
     return res.status(404).json({ message: "Vehicle not found" });
   }
 
+  const linkedBookings = await Booking.countDocuments({ vehicleId: vehicle.id });
+  if (linkedBookings > 0) {
+    vehicle.availability = false;
+    vehicle.status = "archived";
+    await vehicle.save();
+    return res.json({ message: "Vehicle has booking history and was archived", archived: true });
+  }
+
   await vehicle.deleteOne();
   res.json({ message: "Vehicle deleted" });
+});
+
+export const listBranchesForAdmin = asyncHandler(async (req, res) => {
+  const filter = req.query.tenantId ? { tenantId: req.query.tenantId } : {};
+  const branches = await Branch.find(filter)
+    .populate("tenantId", "companyName ownerName email status")
+    .sort({ createdAt: -1 });
+  res.json(branches);
 });
 
 export const listVehiclesForAdmin = asyncHandler(async (req, res) => {
@@ -233,13 +349,11 @@ export const updateBookingStatus = asyncHandler(async (req, res) => {
 });
 
 export const analytics = asyncHandler(async (req, res) => {
-  const [totalUsers, totalBookings, totalVehicles, activeUsers, activeSubscriptions, totalTenants] = await Promise.all([
+  const [totalUsers, totalBookings, totalVehicles, activeUsers] = await Promise.all([
     User.countDocuments(),
     Booking.countDocuments(),
     Vehicle.countDocuments(),
     User.countDocuments({ status: "active" }),
-    Subscription.countDocuments({ status: { $in: ["trial", "active", "renewal_due"] } }),
-    Tenant.countDocuments(),
   ]);
 
   const now = new Date();
@@ -258,28 +372,12 @@ export const analytics = asyncHandler(async (req, res) => {
 
   const monthlyRevenue = revenueAgg[0]?.total || 0;
 
-  const subscriptionRevenueAgg = await Payment.aggregate([
-    {
-      $match: {
-        paymentFor: "owner_subscription",
-        status: "paid",
-        createdAt: { $gte: monthStart, $lt: monthEnd },
-      },
-    },
-    { $group: { _id: null, total: { $sum: "$amount" } } },
-  ]);
-
-  const subscriptionRevenue = subscriptionRevenueAgg[0]?.total || 0;
-
   res.json({
     totalUsers,
     totalBookings,
     totalVehicles,
     activeUsers,
     monthlyRevenue,
-    activeSubscriptions,
-    subscriptionRevenue,
-    totalTenants,
   });
 });
 
@@ -303,7 +401,7 @@ export const sendAdminMessage = asyncHandler(async (req, res) => {
     return res.status(400).json({ message: "Message is required" });
   }
 
-  if (!["selected", "users", "clients", "collective"].includes(audience)) {
+  if (!["selected", "users", "collective"].includes(audience)) {
     return res.status(400).json({ message: "Invalid audience" });
   }
 
@@ -312,9 +410,7 @@ export const sendAdminMessage = asyncHandler(async (req, res) => {
     ? { ...baseFilter, _id: { $in: Array.isArray(recipientIds) ? recipientIds : [] } }
     : audience === "users"
       ? { ...baseFilter, role: "user" }
-      : audience === "clients"
-        ? { ...baseFilter, role: "owner" }
-        : { ...baseFilter, role: { $in: ["user", "owner"] } };
+      : baseFilter;
 
   if (audience === "selected" && (!Array.isArray(recipientIds) || recipientIds.length === 0)) {
     return res.status(400).json({ message: "Select at least one recipient" });

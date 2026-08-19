@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, Building2, CalendarDays, CheckCircle, Clock, CreditCard, ExternalLink, QrCode, ShieldCheck, Sparkles, XCircle } from "lucide-react";
+import { ArrowLeft, CalendarDays, CheckCircle, Clock, CreditCard, ExternalLink, QrCode, ShieldCheck, Sparkles, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import type { Vehicle } from "@/lib/types";
@@ -151,7 +151,7 @@ const Booking = () => {
           key: payment.checkout.keyId,
           amount: payment.checkout.amount,
           currency: payment.checkout.currency || "INR",
-          name: tenant?.companyName || "MotoRentix Rental",
+          name: "MotoRentix Rental",
           description: vehicle.name,
           order_id: payment.checkout.orderId,
           prefill: {
@@ -216,9 +216,8 @@ const Booking = () => {
     }
   };
 
-  const tenant = vehicle.tenantId && typeof vehicle.tenantId === "object" ? vehicle.tenantId : null;
   const branch = vehicle.branchId && typeof vehicle.branchId === "object" ? vehicle.branchId : null;
-  const paymentMethods = vehicle.availablePaymentMethods?.length ? vehicle.availablePaymentMethods : ["cash"];
+  const paymentMethods = vehicle.availablePaymentMethods?.length ? vehicle.availablePaymentMethods : ["cash", "upi"];
 
   return (
     <div className="section-padding bg-background min-h-screen">
@@ -336,8 +335,8 @@ const Booking = () => {
                   <span className="font-semibold text-foreground">{vehicle.name}</span>
                 </div>
                 <div className="flex justify-between gap-4 text-sm">
-                  <span className="text-muted-foreground">Rental company</span>
-                  <span className="text-right font-semibold text-foreground">{tenant?.companyName || "Verified rental company"}</span>
+                  <span className="text-muted-foreground">Managed by</span>
+                  <span className="text-right font-semibold text-foreground">MotoRentix Fleet</span>
                 </div>
                 <div className="flex justify-between gap-4 text-sm">
                   <span className="text-muted-foreground">Pickup branch</span>
@@ -365,8 +364,8 @@ const Booking = () => {
 
               <div className="rounded-2xl border border-border/60 bg-background/60 p-5">
                 <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                  <Building2 size={16} className="text-primary" />
-                  Payment goes to {tenant?.companyName || "this rental company"}
+                  <ShieldCheck size={16} className="text-primary" />
+                  Payment is handled by MotoRentix
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {paymentMethods.map((method) => (
@@ -406,7 +405,7 @@ const Booking = () => {
                       </div>
                       <div className="flex justify-between gap-4">
                         <span className="text-muted-foreground">Payee</span>
-                        <span className="text-right font-semibold text-foreground">{checkout.checkout.displayName || tenant?.companyName || "Rental company"}</span>
+                        <span className="text-right font-semibold text-foreground">{checkout.checkout.displayName || "MotoRentix Rental"}</span>
                       </div>
                       <div className="flex justify-between gap-4">
                         <span className="text-muted-foreground">Amount</span>

@@ -30,11 +30,16 @@ export interface Vehicle {
   description?: string;
   image?: string;
   images?: string[];
+  features?: string[];
+  engineNumber?: string;
+  chassisNumber?: string;
   pricePerHour: number;
   pricePerDay: number;
   pricePerWeek?: number;
+  pricePerMonth?: number;
+  securityDeposit?: number;
   availability: boolean;
-  status?: "available" | "booked" | "maintenance" | "disabled";
+  status?: "available" | "booked" | "maintenance" | "disabled" | "archived";
   availablePaymentMethods?: string[];
   createdAt?: string;
   updatedAt?: string;

@@ -11,15 +11,12 @@ const Navbar = () => {
   const location = useLocation();
   const { isAuthenticated, logout, user } = useStore();
 
-  const isTenantUser = user?.role === "owner" || user?.role === "staff";
-
   const navLinks = [
     { to: '/', label: 'Home' },
-    { to: isTenantUser ? "/tenant" : '/dashboard', label: 'Dashboard' },
-    { to: '/pricing', label: 'Pricing' },
+    { to: '/dashboard', label: 'Vehicles' },
     { to: '/about', label: 'About' },
     { to: '/contact', label: 'Contact' },
-    ...(isAuthenticated && !isTenantUser ? [
+    ...(isAuthenticated ? [
       { to: '/my-bookings', label: 'My Booking' },
       { to: '/profile', label: 'Profile' },
     ] : []),
@@ -54,16 +51,6 @@ const Navbar = () => {
           </div>
 
           <div className="hidden items-center gap-3 md:flex">
-            {!isTenantUser && (
-              <Link
-                to="/owner/register"
-                className="flex items-center gap-2 rounded-md border border-border bg-background px-4 py-2.5 text-sm font-semibold text-foreground transition hover:border-primary/40 hover:text-primary"
-              >
-                <ProIcon name="building" size={16} />
-                For owners
-              </Link>
-            )}
-
             {isAuthenticated ? (
               <div className="flex items-center gap-3">
                 <span className="flex items-center gap-2 rounded-md bg-secondary px-3 py-2 text-sm font-medium text-muted-foreground">
@@ -119,17 +106,6 @@ const Navbar = () => {
                   {link.label}
                 </Link>
               ))}
-
-              {!isTenantUser && (
-                <Link
-                  to="/owner/register"
-                  onClick={closeMenu}
-                  className="mt-2 flex items-center justify-center gap-2 rounded-md border border-border px-4 py-3 text-sm font-semibold text-foreground"
-                >
-                  <ProIcon name="building" size={16} />
-                  For owners
-                </Link>
-              )}
 
               {isAuthenticated ? (
                 <button

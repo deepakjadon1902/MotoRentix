@@ -1,12 +1,11 @@
 import { NavLink, Outlet, Link } from "react-router-dom";
 import {
   Bike,
+  BarChart3,
   BookOpenCheck,
-  CreditCard,
   LayoutDashboard,
   LogOut,
   MessageSquare,
-  Store,
   Users,
 } from "lucide-react";
 import { useAdminStore } from '@/store/adminStore';
@@ -15,8 +14,7 @@ import { ProIcon } from "@/components/ProIcons";
 
 const links = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard, end: true },
-  { to: "/admin/clients", label: "Clients", icon: Store },
-  { to: "/admin/subscriptions", label: "Subscriptions", icon: CreditCard },
+  { to: "/admin/analytics", label: "Analytics", icon: BarChart3 },
   { to: "/admin/vehicles", label: "Vehicles", icon: Bike },
   { to: "/admin/users", label: "Users", icon: Users },
   { to: "/admin/bookings", label: "Bookings", icon: BookOpenCheck },
@@ -55,8 +53,8 @@ const AdminLayout = () => {
           <aside className="h-fit rounded-lg border border-white/10 bg-white/95 p-3 shadow-xl shadow-slate-950/10 backdrop-blur-xl lg:sticky lg:top-6">
             <div className="mb-3 hidden rounded-md bg-slate-950 p-4 text-white lg:block">
               <ProIcon name="gauge" className="text-primary" size={22} />
-              <p className="mt-3 font-heading text-lg font-bold">Platform Command</p>
-              <p className="mt-1 text-xs text-white/60">Clients, revenue, subscriptions, and fleet oversight.</p>
+              <p className="mt-3 font-heading text-lg font-bold">Rental Command</p>
+              <p className="mt-1 text-xs text-white/60">Fleet, bookings, customers, and support oversight.</p>
             </div>
 
             <nav className="scroll-fade-x flex gap-2 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0">

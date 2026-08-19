@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Bike, Building2, CalendarDays, CheckCircle, Clock, CreditCard, IndianRupee, MapPin, ShieldCheck, XCircle } from "lucide-react";
+import { Bike, CalendarDays, CheckCircle, Clock, CreditCard, IndianRupee, MapPin, ShieldCheck, XCircle } from "lucide-react";
 import PublicWorkflowBar from "@/components/PublicWorkflowBar";
 import { useStore } from "@/store/useStore";
 
@@ -78,7 +78,7 @@ const BookingStatus = () => {
                   {paymentStatus === "failed" ? "Payment needs attention" : "Your ride request is in progress"}
                 </h1>
                 <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-                  We keep the booking with the selected rental company only. Payment webhooks verify the transaction and the company receives the booking details automatically.
+                  MotoRentix keeps your booking, payment status, pickup preparation, and return workflow in one managed admin system.
                 </p>
               </div>
               <span className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-bold ${paymentMeta.tone}`}>
@@ -108,16 +108,12 @@ const BookingStatus = () => {
 
                 <div className="rounded-2xl border border-border bg-background/70 p-5">
                   <div className="flex items-center gap-3">
-                    {booking.tenant?.logoUrl ? (
-                      <img src={booking.tenant.logoUrl} alt={booking.tenant.companyName || "Company"} className="h-11 w-11 rounded-full object-cover" />
-                    ) : (
-                      <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                        <Building2 size={20} />
-                      </span>
-                    )}
+                    <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                      <ShieldCheck size={20} />
+                    </span>
                     <div>
-                      <p className="text-xs uppercase tracking-wider text-muted-foreground">Rental company</p>
-                      <p className="font-heading text-lg font-bold text-foreground">{booking.tenant?.companyName || "Verified rental company"}</p>
+                      <p className="text-xs uppercase tracking-wider text-muted-foreground">Managed by</p>
+                      <p className="font-heading text-lg font-bold text-foreground">MotoRentix Fleet</p>
                     </div>
                   </div>
                 </div>
@@ -144,9 +140,9 @@ const BookingStatus = () => {
 
             <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-4">
               {[
-                { title: "Request received", text: "Booking created with tenant isolation.", done: true },
+                { title: "Request received", text: "Booking created in the admin system.", done: true },
                 { title: "Payment check", text: routeState.provider || query.get("provider") ? `${routeState.provider || query.get("provider")} gateway response` : "Gateway webhook response", done: paymentStatus === "paid" },
-                { title: "Company verification", text: "Documents and pickup readiness.", done: booking?.status === "confirmed" || booking?.status === "running" || booking?.status === "completed" },
+                { title: "Admin verification", text: "Documents and pickup readiness.", done: booking?.status === "confirmed" || booking?.status === "running" || booking?.status === "completed" },
                 { title: "Pickup & ride", text: "Collect vehicle and enjoy.", done: booking?.status === "running" || booking?.status === "completed" },
               ].map((step) => (
                 <div key={step.title} className="rounded-2xl border border-border bg-background/70 p-4">
@@ -163,7 +159,7 @@ const BookingStatus = () => {
               <h2 className="font-heading text-xl font-bold text-foreground">Next actions</h2>
               <div className="mt-4 space-y-3 text-sm text-muted-foreground">
                 <p className="flex gap-2"><ShieldCheck size={16} className="mt-0.5 text-primary" /> Keep your license and ID ready for pickup verification.</p>
-                <p className="flex gap-2"><MapPin size={16} className="mt-0.5 text-primary" /> The rental company will confirm pickup instructions.</p>
+                <p className="flex gap-2"><MapPin size={16} className="mt-0.5 text-primary" /> MotoRentix will confirm pickup instructions.</p>
                 <p className="flex gap-2"><CreditCard size={16} className="mt-0.5 text-primary" /> Failed or pending payments can be reviewed from My Bookings.</p>
               </div>
               <div className="mt-6 grid gap-3">

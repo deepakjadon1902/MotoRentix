@@ -37,14 +37,11 @@ export const createBooking = asyncHandler(async (req, res) => {
     return res.status(400).json({ message: "Invalid durationType" });
   }
 
-  const vehicle = await Vehicle.findById(vehicleId).populate("tenantId", "status companyName publicBookingEnabled");
+  const vehicle = await Vehicle.findById(vehicleId);
   if (!vehicle) {
     return res.status(404).json({ message: "Vehicle not found" });
   }
-  if (!["trial", "active", "renewal_due"].includes(vehicle.tenantId?.status) || vehicle.tenantId?.publicBookingEnabled === false) {
-    return res.status(403).json({ message: "This rental company is not accepting bookings right now" });
-  }
-  if (!vehicle.availability) {
+  if (!vehicle.availability || ["disabled", "archived"].includes(vehicle.status)) {
     return res.status(400).json({ message: "Vehicle is not available" });
   }
 
@@ -54,7 +51,6 @@ export const createBooking = asyncHandler(async (req, res) => {
   }
 
   const booking = await Booking.create({
-    tenantId: vehicle.tenantId._id || vehicle.tenantId,
     userId: req.user.id,
     vehicleId: vehicle.id,
     durationType,
@@ -68,7 +64,7 @@ export const createBooking = asyncHandler(async (req, res) => {
     await sendMail({
       to: req.user.email,
       subject: `Booking request received - ${vehicle.name}`,
-      text: `Your booking request has been received.\n\nBooking ID: ${booking.id}\nCompany: ${vehicle.tenantId?.companyName || "-"}\nVehicle: ${vehicle.name}\nDuration: ${durationType}\nStart: ${new Date(startDate).toLocaleString("en-IN")}\nEnd: ${new Date(endDate).toLocaleString("en-IN")}\nAmount: INR ${totalPrice}\nPayment Status: pending\nBooking Status: pending`,
+      text: `Your booking request has been received.\n\nBooking ID: ${booking.id}\nVehicle: ${vehicle.name}\nDuration: ${durationType}\nStart: ${new Date(startDate).toLocaleString("en-IN")}\nEnd: ${new Date(endDate).toLocaleString("en-IN")}\nAmount: INR ${totalPrice}\nPayment Status: pending\nBooking Status: pending`,
       html: `
         <div style="font-family:Arial,sans-serif;line-height:1.6;color:#172033">
           <h2 style="color:#0b5ed7">Booking request received</h2>
@@ -76,7 +72,6 @@ export const createBooking = asyncHandler(async (req, res) => {
           <table style="border-collapse:collapse;width:100%;max-width:620px">
             ${[
               ["Booking ID", booking.id],
-              ["Company", vehicle.tenantId?.companyName || "-"],
               ["Vehicle", vehicle.name],
               ["Duration", durationType],
               ["Start", new Date(startDate).toLocaleString("en-IN")],
@@ -98,7 +93,6 @@ export const createBooking = asyncHandler(async (req, res) => {
 
 export const listUserBookings = asyncHandler(async (req, res) => {
   const bookings = await Booking.find({ userId: req.user.id })
-    .populate("tenantId", "companyName phone branding")
     .populate("vehicleId", "name category image images pricePerHour pricePerDay pricePerWeek")
     .sort({ createdAt: -1 });
   res.json(bookings);

@@ -15,7 +15,7 @@ const seoMap: Record<string, SeoEntry> = {
   "/": {
     title: "MotoRentix | Premium Bike and Scooter Rentals",
     description:
-      "Book premium bikes and scooters with MotoRentix for hourly, daily, and subscription-based rides with fast pickup, transparent pricing, and trusted support.",
+      "Book premium bikes, scooters, and electric rides with MotoRentix for hourly, daily, and weekly rentals with fast pickup, transparent pricing, and trusted support.",
   },
   "/dashboard": {
     title: "Rental Dashboard | MotoRentix",
@@ -40,52 +40,7 @@ const seoMap: Record<string, SeoEntry> = {
   "/contact": {
     title: "Contact MotoRentix | Bike and Scooter Rental Support",
     description:
-      "Contact MotoRentix for bike rentals, scooter bookings, subscription plans, fleet questions, or customer support.",
-  },
-  "/pricing": {
-    title: "Bike Rental Software Pricing | MotoRentix SaaS",
-    description:
-      "Compare MotoRentix SaaS subscription plans for bike rental shop owners, including fleet limits, staff accounts, branches, analytics, branding, and API access.",
-  },
-  "/owner/register": {
-    title: "Register Your Bike Rental Shop | MotoRentix SaaS",
-    description:
-      "Create a MotoRentix owner account, choose a subscription plan, and launch a tenant dashboard for your bike rental business.",
-  },
-  "/tenant": {
-    title: "Owner Dashboard | MotoRentix SaaS",
-    description: "Manage your MotoRentix rental shop workspace, bikes, bookings, customers, staff, branches, and subscription status.",
-    robots: "noindex,nofollow",
-  },
-  "/tenant/fleet": {
-    title: "Fleet Management | MotoRentix SaaS",
-    description: "Manage tenant-specific bikes, scooters, pricing, availability, and fleet records.",
-    robots: "noindex,nofollow",
-  },
-  "/tenant/users": {
-    title: "Tenant Users | MotoRentix SaaS",
-    description: "View customers and staff for a single bike rental company workspace.",
-    robots: "noindex,nofollow",
-  },
-  "/tenant/bookings": {
-    title: "Tenant Bookings | MotoRentix SaaS",
-    description: "Manage tenant-scoped booking orders and booking status.",
-    robots: "noindex,nofollow",
-  },
-  "/tenant/orders": {
-    title: "Tenant Orders | MotoRentix SaaS",
-    description: "Review tenant booking orders and rental workflow status.",
-    robots: "noindex,nofollow",
-  },
-  "/tenant/payments": {
-    title: "Tenant Payments | MotoRentix SaaS",
-    description: "View tenant-specific customer rental payments and subscription payment records.",
-    robots: "noindex,nofollow",
-  },
-  "/tenant/settings": {
-    title: "Tenant Settings | MotoRentix SaaS",
-    description: "Configure tenant payment gateways, Razorpay, UPI, invoices, and business settings.",
-    robots: "noindex,nofollow",
+      "Contact MotoRentix for bike rentals, scooter bookings, electric rides, fleet questions, or customer support.",
   },
   "/login": {
     title: "Login | MotoRentix",
@@ -98,12 +53,12 @@ const seoMap: Record<string, SeoEntry> = {
   },
   "/admin/login": {
     title: "Admin Login | MotoRentix",
-    description: "Secure MotoRentix super admin login for fleet, client, subscription, booking, and support management.",
+    description: "Secure MotoRentix admin login for fleet, booking, user, revenue, and support management.",
     robots: "noindex,nofollow",
   },
   "/admin": {
-    title: "Super Admin Dashboard | MotoRentix",
-    description: "MotoRentix super admin dashboard for fleet analytics, bookings, users, revenue, and subscription performance.",
+    title: "Admin Dashboard | MotoRentix",
+    description: "MotoRentix admin dashboard for fleet analytics, bookings, users, revenue, and support performance.",
     robots: "noindex,nofollow",
   },
   "/admin/vehicles": {
@@ -112,8 +67,8 @@ const seoMap: Record<string, SeoEntry> = {
     robots: "noindex,nofollow",
   },
   "/admin/users": {
-    title: "Client Management | MotoRentix Admin",
-    description: "Manage MotoRentix clients, account status, contact details, and rider verification information.",
+    title: "User Management | MotoRentix Admin",
+    description: "Manage MotoRentix users, account status, contact details, and rider verification information.",
     robots: "noindex,nofollow",
   },
   "/admin/bookings": {
@@ -124,16 +79,6 @@ const seoMap: Record<string, SeoEntry> = {
   "/admin/messages": {
     title: "Support Messages | MotoRentix Admin",
     description: "Reply to MotoRentix customer messages and send support responses through Resend-powered email.",
-    robots: "noindex,nofollow",
-  },
-  "/admin/subscriptions": {
-    title: "Subscription Management | MotoRentix Admin",
-    description: "Create and manage MotoRentix client subscriptions, billing cycles, ride credits, discounts, and plan status.",
-    robots: "noindex,nofollow",
-  },
-  "/admin/clients": {
-    title: "Client Management | MotoRentix Admin",
-    description: "Add bike rental shop clients, assign subscription plans, activate access, deactivate clients, and monitor expiry status.",
     robots: "noindex,nofollow",
   },
 };

@@ -1,5 +1,4 @@
 import Vehicle from "../models/Vehicle.js";
-import TenantSettings from "../models/TenantSettings.js";
 import asyncHandler from "../middleware/asyncHandler.js";
 
 const mapPublicVehicle = async (vehicle, includePaymentMethods = false) => {
@@ -8,32 +7,26 @@ const mapPublicVehicle = async (vehicle, includePaymentMethods = false) => {
     obj.images = [obj.image];
   }
 
-  if (includePaymentMethods && obj.tenantId?._id) {
-    const settings = await TenantSettings.findOne({ tenantId: obj.tenantId._id }).select("paymentMethods");
-    obj.availablePaymentMethods = Object.entries(settings?.paymentMethods?.toObject?.() || settings?.paymentMethods || {})
-      .filter(([, value]) => value?.enabled)
-      .map(([key]) => key === "bankTransfer" ? "bank_transfer" : key);
+  if (includePaymentMethods) {
+    obj.availablePaymentMethods = ["cash", "upi"];
   }
 
   return obj;
 };
 
 export const listVehicles = asyncHandler(async (req, res) => {
-  const vehicles = await Vehicle.find({ availability: true, status: { $ne: "disabled" } })
-    .populate("tenantId", "companyName ownerName phone status branding")
+  const vehicles = await Vehicle.find({ availability: true, status: { $nin: ["disabled", "archived"] } })
     .populate("branchId", "name city address status")
     .sort({ createdAt: -1 });
 
-  const activeVehicles = vehicles.filter((vehicle) => ["trial", "active", "renewal_due"].includes(vehicle.tenantId?.status));
-  res.json(await Promise.all(activeVehicles.map((vehicle) => mapPublicVehicle(vehicle))));
+  res.json(await Promise.all(vehicles.map((vehicle) => mapPublicVehicle(vehicle))));
 });
 
 export const getVehicleById = asyncHandler(async (req, res) => {
   const vehicle = await Vehicle.findById(req.params.id)
-    .populate("tenantId", "companyName ownerName email phone status branding")
     .populate("branchId", "name city address status");
 
-  if (!vehicle || !["trial", "active", "renewal_due"].includes(vehicle.tenantId?.status)) {
+  if (!vehicle || ["disabled", "archived"].includes(vehicle.status)) {
     return res.status(404).json({ message: "Vehicle not found" });
   }
   res.json(await mapPublicVehicle(vehicle, true));

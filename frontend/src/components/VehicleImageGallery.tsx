@@ -40,9 +40,9 @@ const VehicleImageGallery = ({ images, alt, className }: VehicleImageGalleryProp
   const mainSrc = safeImages[activeIndex];
 
   return (
-    <div className={cn("grid gap-3 sm:gap-4 lg:grid-cols-[80px_1fr]", className)}>
+    <div className={cn("grid gap-3 lg:grid-cols-[70px_1fr]", className)}>
       <div
-        className="order-2 lg:order-1 flex gap-2 lg:flex-col lg:gap-3 overflow-x-auto lg:overflow-visible pb-1 lg:pb-0"
+        className="order-2 flex gap-2 overflow-x-auto pb-1 lg:order-1 lg:flex-col lg:overflow-visible lg:pb-0"
         onMouseEnter={startAuto}
         onMouseLeave={stopAuto}
       >
@@ -58,9 +58,9 @@ const VehicleImageGallery = ({ images, alt, className }: VehicleImageGalleryProp
               }}
               onFocus={() => setActiveIndex(idx)}
               className={cn(
-                "relative shrink-0 rounded-xl border overflow-hidden transition-all",
-                idx === activeIndex ? "border-primary ring-2 ring-primary/30" : "border-border/60 hover:border-primary/50",
-                "h-16 w-20 lg:h-16 lg:w-20 bg-secondary"
+                "relative shrink-0 overflow-hidden rounded-md border bg-secondary transition-all",
+                idx === activeIndex ? "border-primary ring-2 ring-primary/25" : "border-border/60 hover:border-primary/50",
+                "h-16 w-20 lg:h-[62px] lg:w-[70px]"
               )}
               aria-label={`Show image ${idx + 1}`}
             >
@@ -81,18 +81,16 @@ const VehicleImageGallery = ({ images, alt, className }: VehicleImageGalleryProp
       </div>
 
       <div className="order-1 lg:order-2">
-        <div className="glass metallic-hover rounded-3xl overflow-hidden border border-border/60">
-          <div className="relative aspect-[4/3] sm:aspect-[16/12] bg-secondary">
+        <div className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
+          <div className="vehicle-media-stage relative aspect-[16/9] max-h-[390px] min-h-[260px] sm:min-h-[330px]">
             {mainSrc && imageOk[activeIndex] !== false ? (
               <>
                 <img
-                  src={optimizeImageUrl(mainSrc, { width: 1200, height: 900, quality: 80 })}
+                  src={optimizeImageUrl(mainSrc, { width: 1100, height: 720, quality: 88 })}
                   alt={alt}
-                  className="h-full w-full object-cover transition-transform duration-700 hover:scale-[1.04]"
+                  className="h-full w-full object-contain p-2 transition-transform duration-500 hover:scale-[1.018] sm:p-3"
                   onError={() => setImageOk((prev) => ({ ...prev, [activeIndex]: false }))}
                 />
-                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.28),transparent_55%)]" />
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-accent/10 opacity-70" />
               </>
             ) : (
               <div className="h-full w-full bg-secondary" />

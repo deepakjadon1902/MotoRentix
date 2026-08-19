@@ -8,10 +8,7 @@ import vehicleRoutes from "./routes/vehicleRoutes.js";
 import bookingRoutes from "./routes/bookingRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import messageRoutes from "./routes/messageRoutes.js";
-import subscriptionRoutes from "./routes/subscriptionRoutes.js";
-import tenantRoutes from "./routes/tenantRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
-import platformRoutes from "./routes/platformRoutes.js";
 import { notFound, errorHandler } from "./middleware/errorHandler.js";
 import { requestContext } from "./middleware/requestContext.js";
 import { rateLimit, securityHeaders } from "./middleware/security.js";
@@ -94,10 +91,7 @@ app.use("/api/vehicles", vehicleRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/messages", messageRoutes);
-app.use("/api/subscriptions", subscriptionRoutes);
-app.use("/api/tenant", tenantRoutes);
 app.use("/api/payments", paymentRoutes);
-app.use("/api/platform", platformRoutes);
 
 app.get("/api/config/google", (req, res) => {
   res.json({

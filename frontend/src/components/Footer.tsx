@@ -1,4 +1,4 @@
-import { useState } from 'react';
+ï»¿import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import BrandMark from '@/components/BrandMark';
@@ -15,14 +15,14 @@ const Footer = () => {
             <div className="flex flex-col gap-3">
               <BrandMark inverted logoClassName="h-12 w-12" />
               <p className="max-w-xs text-sm opacity-70">
-                Enterprise rental software for bike and scooter operators, with fast customer booking experiences.
+                Premium bike, scooter, and electric ride rentals managed by the MotoRentix team.
               </p>
             </div>
 
             <div className="flex flex-col gap-2">
-              <h4 className="font-heading mb-2 text-lg font-semibold">Platform</h4>
-              <Link to="/pricing" className="text-sm opacity-70 transition-opacity hover:opacity-100">Pricing</Link>
-              <Link to="/owner/register" className="text-sm opacity-70 transition-opacity hover:opacity-100">Register Company</Link>
+              <h4 className="font-heading mb-2 text-lg font-semibold">Rentals</h4>
+              <Link to="/dashboard" className="text-sm opacity-70 transition-opacity hover:opacity-100">Browse Vehicles</Link>
+              <Link to="/my-bookings" className="text-sm opacity-70 transition-opacity hover:opacity-100">My Bookings</Link>
               <Link to="/login" className="text-sm opacity-70 transition-opacity hover:opacity-100">Login</Link>
             </div>
 
@@ -43,7 +43,7 @@ const Footer = () => {
           </div>
 
           <div className="mt-10 border-t border-background/10 pt-6 text-center">
-            <p className="text-sm opacity-50">© 2026 MotoRentix. All rights reserved.</p>
+            <p className="text-sm opacity-50">2026 MotoRentix. All rights reserved.</p>
           </div>
         </div>
       </footer>
@@ -70,11 +70,11 @@ const Footer = () => {
             <DialogTitle className="font-heading text-2xl">Privacy Policy</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 text-sm text-muted-foreground">
-            <p><strong>1. Data Collection</strong><br />We collect personal info (name, email, Aadhaar) solely for rental verification and communication.</p>
+            <p><strong>1. Data Collection</strong><br />We collect personal info solely for rental verification and communication.</p>
             <p><strong>2. Data Usage</strong><br />Your data is used to process bookings, verify identity, and improve our services.</p>
-            <p><strong>3. Data Protection</strong><br />We employ industry-standard encryption and security measures to protect your data.</p>
-            <p><strong>4. Third Parties</strong><br />We do not sell or share your personal data with third parties without consent.</p>
-            <p><strong>5. Contact</strong><br />For privacy concerns, email us at privacy@motorentix.com.</p>
+            <p><strong>3. Data Protection</strong><br />We use security measures to protect your data.</p>
+            <p><strong>4. Third Parties</strong><br />We do not sell your personal data.</p>
+            <p><strong>5. Contact</strong><br />For privacy concerns, email privacy@motorentix.com.</p>
           </div>
         </DialogContent>
       </Dialog>
@@ -83,4 +83,3 @@ const Footer = () => {
 };
 
 export default Footer;
-

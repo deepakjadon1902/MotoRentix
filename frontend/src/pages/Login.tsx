@@ -26,7 +26,7 @@ const Login = () => {
     const result = await login(email, password);
     if (result.ok) {
       toast.success('Welcome back!');
-      navigate(result.user?.role === "owner" || result.user?.role === "staff" ? "/tenant" : "/profile");
+      navigate("/profile");
     } else {
       const message = result.message || 'Login failed';
       toast.error(message);

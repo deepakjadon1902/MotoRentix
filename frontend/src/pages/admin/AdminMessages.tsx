@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { adminApi, type AdminMessage, type AdminUser } from "@/lib/adminApi";
 import { useAdminStore } from "@/store/adminStore";
 
-type Audience = "selected" | "users" | "clients" | "collective";
+type Audience = "selected" | "users" | "collective";
 
 const userIdOf = (user: AdminUser) => user._id || user.id || "";
 
@@ -11,7 +11,7 @@ const AdminMessages = () => {
   const [messages, setMessages] = useState<AdminMessage[]>([]);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string>("all");
-  const [audience, setAudience] = useState<Audience>("clients");
+  const [audience, setAudience] = useState<Audience>("collective");
   const [recipientIds, setRecipientIds] = useState<string[]>([]);
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
@@ -39,17 +39,14 @@ const AdminMessages = () => {
     load();
   }, [load]);
 
-  const clients = useMemo(() => users.filter((u) => u.role === "owner"), [users]);
   const customers = useMemo(() => users.filter((u) => u.role === "user"), [users]);
-  const collectiveRecipients = useMemo(() => [...clients, ...customers], [clients, customers]);
+  const collectiveRecipients = useMemo(() => users.filter((u) => u.role !== "admin"), [users]);
   const selectableRecipients = useMemo(
     () => collectiveRecipients.length ? collectiveRecipients : users.filter((u) => u.role !== "admin"),
     [collectiveRecipients, users],
   );
 
-  const previewRecipients = audience === "clients"
-    ? clients
-    : audience === "users"
+  const previewRecipients = audience === "users"
       ? customers
       : audience === "collective"
         ? collectiveRecipients
@@ -123,7 +120,7 @@ const AdminMessages = () => {
     <div className="space-y-6">
       <div>
         <h1 className="font-heading text-3xl font-bold text-foreground">Messages</h1>
-        <p className="text-muted-foreground mt-1">Send messages to clients, users, everyone, or a particular recipient.</p>
+        <p className="text-muted-foreground mt-1">Send messages to riders, everyone, or a particular recipient.</p>
       </div>
 
       {notice && (
@@ -153,9 +150,8 @@ const AdminMessages = () => {
 
         <div className="mt-5 grid grid-cols-2 gap-2 md:grid-cols-4">
           {([
-            ["clients", "Clients", `${clients.length} tenant owners`],
-            ["users", "Users", `${customers.length} customers`],
-            ["collective", "Collective", `${collectiveRecipients.length} clients + users`],
+            ["users", "Riders", `${customers.length} customers`],
+            ["collective", "Everyone", `${collectiveRecipients.length} recipients`],
             ["selected", "Particular", `${recipientIds.length} selected`],
           ] as [Audience, string, string][]).map(([value, label, helper]) => (
             <button
@@ -193,7 +189,7 @@ const AdminMessages = () => {
                     <div className="flex items-center justify-between gap-2">
                       <span className="truncate text-sm font-semibold text-foreground">{user.name || "User"}</span>
                       <span className="shrink-0 rounded-full bg-secondary px-2 py-0.5 text-[10px] font-bold uppercase text-muted-foreground">
-                        {user.role === "owner" ? "client" : user.role || "user"}
+                        {user.role === "owner" ? "staff" : user.role || "user"}
                       </span>
                     </div>
                     <div className="truncate text-xs text-muted-foreground">{user.email || ""}</div>

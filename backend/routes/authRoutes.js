@@ -1,7 +1,6 @@
 import { Router } from "express";
 import {
   register,
-  registerTenantOwner,
   login,
   requestPasswordResetOtp,
   googleLogin,
@@ -13,7 +12,6 @@ import {
 const router = Router();
 
 router.post("/register", register);
-router.post("/tenant/register", registerTenantOwner);
 router.post("/login", login);
 router.post("/forgot-password", requestPasswordResetOtp);
 router.post("/verify-reset-otp", verifyPasswordResetOtp);
