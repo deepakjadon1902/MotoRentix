@@ -1,38 +1,57 @@
-import type { Booking, UserMessage, UserProfile, Vehicle } from "@/lib/types";
+import type { Booking, SubscriptionPlan, UserMessage, UserProfile, Vehicle } from "@/lib/types";
 import { API_BASE_URL } from "@/lib/apiBase";
 import { resolveApiAssetUrl } from "@/lib/assetUrl";
 
 type VehicleDto = {
   _id?: string;
   id?: string;
+  tenantId?: Vehicle["tenantId"];
+  branchId?: Vehicle["branchId"];
   name?: string;
-  category?: "bike" | "scooter";
+  bikeNumber?: string;
+  category?: Vehicle["category"];
   description?: string;
   image?: string;
   images?: string[];
   pricePerHour?: number;
   pricePerDay?: number;
+  pricePerWeek?: number;
   availability?: boolean;
+  status?: Vehicle["status"];
+  availablePaymentMethods?: string[];
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 type BookingDto = {
   _id?: string;
   id?: string;
+  tenantId?: string | {
+    _id?: string;
+    id?: string;
+    companyName?: string;
+    phone?: string;
+    branding?: { logoUrl?: string };
+  };
   vehicleId?: VehicleDto | string;
   vehicleName?: string;
-  durationType?: "hour" | "day";
+  durationType?: "hour" | "day" | "week";
   startDate?: string;
   endDate?: string;
   totalPrice?: number;
-  status?: "pending" | "confirmed" | "rejected" | "completed";
+  status?: Booking["status"];
+  paymentStatus?: Booking["paymentStatus"];
   createdAt?: string;
 };
 
 type MessageDto = {
   _id?: string;
   id?: string;
+  subject?: string;
   message?: string;
   adminReply?: string;
+  direction?: UserMessage["direction"];
+  audience?: UserMessage["audience"];
   createdAt?: string;
 };
 
@@ -80,14 +99,22 @@ const mapVehicle = (v: VehicleDto): Vehicle => {
 
   return ({
   id: v._id || v.id || "",
+  tenantId: v.tenantId,
+  branchId: v.branchId,
   name: v.name || "",
+  bikeNumber: v.bikeNumber,
   category: v.category || "bike",
   description: v.description,
   image: mainImage,
   images: normalizedImages,
   pricePerHour: v.pricePerHour ?? 0,
   pricePerDay: v.pricePerDay ?? 0,
+  pricePerWeek: v.pricePerWeek ?? 0,
   availability: Boolean(v.availability),
+  status: v.status,
+  availablePaymentMethods: v.availablePaymentMethods || [],
+  createdAt: v.createdAt,
+  updatedAt: v.updatedAt,
 });
 };
 
@@ -105,8 +132,28 @@ export const api = {
   }): Promise<{ token: string; user: UserProfile }> {
     return request("/auth/register", { method: "POST", body: JSON.stringify(payload) });
   },
+  async registerTenantOwner(payload: {
+    companyName: string;
+    ownerName: string;
+    email: string;
+    phone: string;
+    password: string;
+    planCode: string;
+    billingCycle: "monthly" | "half_yearly" | "yearly";
+  }): Promise<{ token: string; user: UserProfile; tenant: unknown; subscription: unknown }> {
+    return request("/auth/tenant/register", { method: "POST", body: JSON.stringify(payload) });
+  },
+  async listPlans(): Promise<SubscriptionPlan[]> {
+    return request<SubscriptionPlan[]>("/subscriptions/plans");
+  },
   async login(payload: { email: string; password: string }): Promise<{ token: string; user: UserProfile }> {
     return request("/auth/login", { method: "POST", body: JSON.stringify(payload) });
+  },
+  async requestPasswordResetOtp(email: string): Promise<{ message: string; devOtp?: string }> {
+    return request("/auth/forgot-password", { method: "POST", body: JSON.stringify({ email }) });
+  },
+  async verifyPasswordResetOtp(payload: { email: string; otp: string }): Promise<{ token: string; resetToken: string; user: UserProfile }> {
+    return request("/auth/verify-reset-otp", { method: "POST", body: JSON.stringify(payload) });
   },
   async googleLogin(credential: string): Promise<{ token: string; user: UserProfile }> {
     return request("/auth/google", { method: "POST", body: JSON.stringify({ credential }) });
@@ -128,6 +175,12 @@ export const api = {
   ): Promise<UserProfile> {
     return request("/users/profile", { method: "PUT", token, body: JSON.stringify(payload) });
   },
+  async updatePassword(
+    token: string,
+    payload: { currentPassword?: string; newPassword: string; resetToken?: string },
+  ): Promise<{ message: string }> {
+    return request("/users/password", { method: "PUT", token, body: JSON.stringify(payload) });
+  },
   async listVehicles(): Promise<Vehicle[]> {
     const data = await request<VehicleDto[]>("/vehicles");
     return data.map(mapVehicle);
@@ -138,14 +191,49 @@ export const api = {
   },
   async createBooking(
     token: string,
-    payload: { vehicleId: string; durationType: "hour" | "day"; startDate: string; endDate: string },
+    payload: { vehicleId: string; durationType: "hour" | "day" | "week"; startDate: string; endDate: string },
   ): Promise<BookingDto> {
     return request("/bookings", { method: "POST", token, body: JSON.stringify(payload) });
+  },
+  async createCustomerRentalPayment(
+    token: string,
+    payload: { bookingId: string; provider: string },
+  ): Promise<{
+    payment: { _id?: string; id?: string; amount?: number; status?: string; provider?: string };
+    checkout?: {
+      provider?: string;
+      keyId?: string;
+      orderId?: string;
+      amount?: number;
+      currency?: string;
+      upiId?: string;
+      displayName?: string;
+      qrDataUrl?: string;
+      upiIntentUrl?: string;
+      note?: string;
+      redirectUrl?: string;
+      sessionId?: string;
+      form?: {
+        action: string;
+        method?: string;
+        fields: Record<string, string>;
+      };
+    };
+  }> {
+    return request("/payments/customer-rental", { method: "POST", token, body: JSON.stringify(payload) });
   },
   async listBookings(token: string): Promise<Booking[]> {
     const data = await request<BookingDto[]>("/bookings/user", { token });
     return data.map((b) => ({
       id: b._id || b.id || "",
+      tenant: typeof b.tenantId === "object" && b.tenantId
+        ? {
+          id: b.tenantId._id || b.tenantId.id || "",
+          companyName: b.tenantId.companyName,
+          phone: b.tenantId.phone,
+          logoUrl: resolveApiAssetUrl(b.tenantId.branding?.logoUrl),
+        }
+        : undefined,
       vehicle: {
         id:
           typeof b.vehicleId === "string"
@@ -180,6 +268,7 @@ export const api = {
       endDate: b.endDate || "",
       totalPrice: b.totalPrice ?? 0,
       status: b.status || "pending",
+      paymentStatus: b.paymentStatus || "pending",
       createdAt: b.createdAt,
     }));
   },
@@ -187,8 +276,11 @@ export const api = {
     const data = await request<MessageDto[]>("/messages", { token });
     return data.map((m) => ({
       id: m._id || m.id || "",
+      subject: m.subject,
       message: m.message || "",
       adminReply: m.adminReply || "",
+      direction: m.direction,
+      audience: m.audience,
       createdAt: m.createdAt,
     }));
   },

@@ -110,6 +110,9 @@
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-body);
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-heading);
@@ -188,6 +191,60 @@
   .section-padding {
     @apply px-4 py-16 md:px-8 lg:px-16 xl:px-24;
   }
+
+  .app-page {
+    @apply min-h-screen bg-background text-foreground;
+    background:
+      linear-gradient(180deg, hsl(var(--background)) 0%, hsl(var(--secondary) / 0.55) 42%, hsl(var(--background)) 100%);
+  }
+
+  .premium-card {
+    @apply rounded-2xl border border-border bg-card shadow-sm transition-all duration-300;
+  }
+
+  .premium-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 22px 50px -28px hsl(var(--foreground) / 0.35);
+  }
+
+  .marketplace-shell {
+    @apply rounded-3xl border border-border bg-card shadow-xl shadow-foreground/10;
+  }
+
+  .marketplace-search {
+    @apply rounded-2xl border border-border bg-background shadow-xl shadow-foreground/10;
+  }
+
+  .marketplace-pill {
+    @apply inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2 text-sm font-semibold text-foreground shadow-sm transition;
+  }
+
+  .marketplace-pill:hover {
+    @apply border-primary/40 text-primary;
+    transform: translateY(-1px);
+  }
+
+  .royal-card {
+    @apply rounded-2xl border border-border bg-card shadow-sm transition-all duration-300;
+    box-shadow: 0 18px 46px -34px hsl(var(--foreground) / 0.42);
+  }
+
+  .royal-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 28px 70px -38px hsl(var(--foreground) / 0.55);
+  }
+
+  .dashboard-surface {
+    @apply rounded-2xl border border-border bg-background/90 shadow-sm backdrop-blur-xl;
+  }
+
+  .focus-ring {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+  }
+
+  .scroll-fade-x {
+    mask-image: linear-gradient(to right, transparent, black 18px, black calc(100% - 18px), transparent);
+  }
 }
 
 @layer utilities {
@@ -196,6 +253,15 @@
   }
   .animate-slide-down {
     animation: slideDown 0.4s ease-out forwards;
+  }
+  .animate-soft-pop {
+    animation: softPop 0.5s ease-out both;
+  }
+  .animate-float-subtle {
+    animation: floatSubtle 7s ease-in-out infinite;
+  }
+  .text-balance {
+    text-wrap: balance;
   }
 }
 
@@ -207,4 +273,25 @@
 @keyframes slideDown {
   from { opacity: 0; transform: translateY(-10px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes softPop {
+  from { opacity: 0; transform: scale(0.98) translateY(12px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes floatSubtle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }

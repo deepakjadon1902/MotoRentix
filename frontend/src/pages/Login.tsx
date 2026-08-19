@@ -26,7 +26,7 @@ const Login = () => {
     const result = await login(email, password);
     if (result.ok) {
       toast.success('Welcome back!');
-      navigate('/profile');
+      navigate(result.user?.role === "owner" || result.user?.role === "staff" ? "/tenant" : "/profile");
     } else {
       const message = result.message || 'Login failed';
       toast.error(message);
@@ -90,7 +90,12 @@ const Login = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Password</label>
+              <div className="mb-1.5 flex items-center justify-between gap-3">
+                <label className="block text-sm font-medium text-foreground">Password</label>
+                <Link to="/forgot-password" className="text-xs font-semibold text-primary hover:underline">
+                  Forgot password?
+                </Link>
+              </div>
               <div className="relative">
                 <input
                   type={showPw ? 'text' : 'password'}

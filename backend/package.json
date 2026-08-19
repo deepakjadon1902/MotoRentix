@@ -4,6 +4,8 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
+    "build": "npm run check",
+    "check": "node --check app.js && node --check server.js && node --check controllers/authController.js && node --check controllers/adminController.js && node --check controllers/bookingController.js && node --check controllers/tenantController.js && node --check controllers/vehicleController.js && node --check controllers/paymentController.js && node --check controllers/subscriptionController.js",
     "dev": "nodemon server.js",
     "start": "node server.js"
   },
@@ -13,10 +15,13 @@
     "dotenv": "^16.6.0",
     "express": "^4.19.2",
     "google-auth-library": "^10.6.2",
+    "imagekit": "^6.0.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.14.0",
     "morgan": "^1.10.0",
-    "multer": "^1.4.5-lts.1"
+    "multer": "^1.4.5-lts.1",
+    "qrcode": "^1.5.4",
+    "sharp": "^0.35.3"
   },
   "devDependencies": {
     "nodemon": "^3.1.4"

@@ -12,11 +12,15 @@ const userSchema = new mongoose.Schema(
     city: { type: String },
     pincode: { type: String },
     aadhaarNumber: { type: String },
-    role: { type: String, enum: ["user", "admin"], default: "user" },
+    role: { type: String, enum: ["user", "admin", "owner", "staff"], default: "user" },
+    tenantId: { type: mongoose.Schema.Types.ObjectId, ref: "Tenant" },
+    branchId: { type: mongoose.Schema.Types.ObjectId, ref: "Branch" },
     status: { type: String, enum: ["active", "blocked"], default: "active" },
   },
   { timestamps: true }
 );
+
+userSchema.index({ tenantId: 1, role: 1 });
 
 userSchema.pre("save", async function onSave(next) {
   if (!this.isModified("password")) return next();

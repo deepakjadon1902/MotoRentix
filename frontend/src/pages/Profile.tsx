@@ -1,13 +1,24 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
-import { User, Mail, Phone, MapPin, Calendar, Hash, IndianRupee, Bookmark } from "lucide-react";
+import { Link, useSearchParams } from "react-router-dom";
+import { User, Mail, Phone, MapPin, Calendar, Hash, IndianRupee, Bookmark, Lock } from "lucide-react";
 import { useStore } from "@/store/useStore";
 import { toast } from "sonner";
+import { api } from "@/lib/api";
+
+const resetTokenKey = "motorentix_password_reset_token";
 
 const Profile = () => {
   const { user, bookings, messages, isAuthenticated, loadProfile, loadBookings, loadMessages, updateProfile } = useStore();
+  const token = useStore((state) => state.token);
+  const [searchParams] = useSearchParams();
   const [isEditing, setIsEditing] = useState(false);
+  const [resetToken, setResetToken] = useState("");
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
   const [form, setForm] = useState({
     name: "",
     phone: "",
@@ -39,6 +50,14 @@ const Profile = () => {
       });
     }
   }, [user]);
+
+  useEffect(() => {
+    const storedResetToken = sessionStorage.getItem(resetTokenKey) || "";
+    setResetToken(storedResetToken);
+    if (searchParams.get("reset") === "password" && storedResetToken) {
+      toast.info("Set and save your new password below.");
+    }
+  }, [searchParams]);
 
   const firstName = useMemo(() => (user?.name ? user.name.split(" ")[0] : ""), [user?.name]);
 
@@ -76,6 +95,36 @@ const Profile = () => {
       setIsEditing(false);
     } else {
       toast.error(result.message || "Profile update failed");
+    }
+  };
+
+  const handlePasswordSave = async () => {
+    if (!token) return;
+    if (!passwordForm.newPassword || passwordForm.newPassword.length < 6) {
+      toast.error("New password must be at least 6 characters");
+      return;
+    }
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      toast.error("New password and confirm password do not match");
+      return;
+    }
+    if (!resetToken && !passwordForm.currentPassword) {
+      toast.error("Current password is required");
+      return;
+    }
+
+    try {
+      await api.updatePassword(token, {
+        currentPassword: resetToken ? undefined : passwordForm.currentPassword,
+        newPassword: passwordForm.newPassword,
+        resetToken: resetToken || undefined,
+      });
+      sessionStorage.removeItem(resetTokenKey);
+      setResetToken("");
+      setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+      toast.success("Password updated. You can now login with the new password.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Password update failed");
     }
   };
 
@@ -261,6 +310,67 @@ const Profile = () => {
           )}
         </motion.div>
 
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35 }}
+          className="glass rounded-2xl p-6 mb-8"
+        >
+          <div className="mb-5 flex items-start gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <Lock size={18} />
+            </div>
+            <div>
+              <h2 className="font-heading text-xl font-bold text-foreground">Update Password</h2>
+              <p className="text-sm text-muted-foreground">
+                {resetToken
+                  ? "OTP verified. Enter and save your new password."
+                  : "Change your password using your current password."}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            {!resetToken && (
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1">Current Password</label>
+                <input
+                  type="password"
+                  value={passwordForm.currentPassword}
+                  onChange={(e) => setPasswordForm((prev) => ({ ...prev, currentPassword: e.target.value }))}
+                  className="w-full rounded-lg border border-border bg-secondary/60 px-4 py-2 text-sm"
+                />
+              </div>
+            )}
+            <div>
+              <label className="block text-xs text-muted-foreground mb-1">New Password</label>
+              <input
+                type="password"
+                value={passwordForm.newPassword}
+                onChange={(e) => setPasswordForm((prev) => ({ ...prev, newPassword: e.target.value }))}
+                className="w-full rounded-lg border border-border bg-secondary/60 px-4 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-muted-foreground mb-1">Confirm Password</label>
+              <input
+                type="password"
+                value={passwordForm.confirmPassword}
+                onChange={(e) => setPasswordForm((prev) => ({ ...prev, confirmPassword: e.target.value }))}
+                className="w-full rounded-lg border border-border bg-secondary/60 px-4 py-2 text-sm"
+              />
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={handlePasswordSave}
+            className="btn-primary-gradient mt-5 rounded-lg px-4 py-2 text-sm font-semibold text-primary-foreground"
+          >
+            Save New Password
+          </button>
+        </motion.div>
+
         {bookings.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -329,17 +439,23 @@ const Profile = () => {
             <div className="space-y-4">
               {messages.map((m) => (
                 <div key={m.id} className="rounded-xl border border-border bg-background/80 p-4 space-y-2">
-                  <p className="text-sm text-muted-foreground">
-                    {m.createdAt ? m.createdAt.split("T")[0] : ""}
-                  </p>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-sm text-muted-foreground">
+                      {m.createdAt ? m.createdAt.split("T")[0] : ""}
+                    </p>
+                    {m.direction === "admin_to_user" && (
+                      <span className="w-fit rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">Admin message</span>
+                    )}
+                  </div>
+                  {m.subject && <h3 className="font-heading text-base font-bold text-foreground">{m.subject}</h3>}
                   <p className="text-sm text-foreground">{m.message}</p>
                   {m.adminReply ? (
                     <div className="rounded-lg bg-secondary p-3 text-sm text-foreground">
                       Admin reply: {m.adminReply}
                     </div>
-                  ) : (
+                  ) : m.direction !== "admin_to_user" ? (
                     <p className="text-xs text-muted-foreground">Awaiting admin reply...</p>
-                  )}
+                  ) : null}
                 </div>
               ))}
             </div>

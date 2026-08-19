@@ -8,7 +8,14 @@ import vehicleRoutes from "./routes/vehicleRoutes.js";
 import bookingRoutes from "./routes/bookingRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import messageRoutes from "./routes/messageRoutes.js";
+import subscriptionRoutes from "./routes/subscriptionRoutes.js";
+import tenantRoutes from "./routes/tenantRoutes.js";
+import paymentRoutes from "./routes/paymentRoutes.js";
+import platformRoutes from "./routes/platformRoutes.js";
 import { notFound, errorHandler } from "./middleware/errorHandler.js";
+import { requestContext } from "./middleware/requestContext.js";
+import { rateLimit, securityHeaders } from "./middleware/security.js";
+import { logger } from "./utils/logger.js";
 import path from "path";
 import fs from "fs";
 import { legacyUploadsDir, uploadsDir } from "./utils/paths.js";
@@ -20,6 +27,9 @@ const frontendUrls = (process.env.FRONTEND_URLS || "")
   .map((value) => value.trim())
   .filter(Boolean);
 
+app.use(requestContext);
+app.use(securityHeaders);
+app.use(rateLimit({ windowMs: 60_000, max: 300, keyPrefix: "api" }));
 app.use(
   cors({
     origin: (origin, callback) => {
@@ -36,8 +46,17 @@ app.use(
     credentials: true,
   })
 );
-app.use(express.json({ limit: "1mb" }));
-app.use(morgan("dev"));
+app.use(express.json({
+  limit: "1mb",
+  verify: (req, res, buf) => {
+    req.rawBody = buf.toString("utf8");
+  },
+}));
+app.use(morgan("dev", {
+  stream: {
+    write: (message) => logger.info(message.trim()),
+  },
+}));
 
 app.get("/", (req, res) => {
   res.status(200).json({
@@ -63,6 +82,10 @@ app.use("/api/vehicles", vehicleRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/messages", messageRoutes);
+app.use("/api/subscriptions", subscriptionRoutes);
+app.use("/api/tenant", tenantRoutes);
+app.use("/api/payments", paymentRoutes);
+app.use("/api/platform", platformRoutes);
 
 app.get("/api/config/google", (req, res) => {
   res.json({

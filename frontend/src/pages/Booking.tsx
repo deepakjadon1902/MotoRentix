@@ -1,23 +1,49 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, CalendarDays, CheckCircle, Clock, ShieldCheck, Sparkles, XCircle } from "lucide-react";
+import { ArrowLeft, Building2, CalendarDays, CheckCircle, Clock, CreditCard, ExternalLink, QrCode, ShieldCheck, Sparkles, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import type { Vehicle } from "@/lib/types";
 import { useStore } from "@/store/useStore";
 import VehicleImageGallery from "@/components/VehicleImageGallery";
+import PublicWorkflowBar from "@/components/PublicWorkflowBar";
+
+declare global {
+  interface Window {
+    Razorpay?: new (options: Record<string, unknown>) => { open: () => void };
+  }
+}
+
+const loadRazorpayCheckout = () =>
+  new Promise<boolean>((resolve) => {
+    if (window.Razorpay) {
+      resolve(true);
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+
+type CheckoutResponse = Awaited<ReturnType<typeof api.createCustomerRentalPayment>>;
 
 const Booking = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { createBooking, isAuthenticated, user } = useStore();
+  const { isAuthenticated, user, token, loadBookings } = useStore();
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const [durationType, setDurationType] = useState<"hour" | "day">("day");
+  const [durationType, setDurationType] = useState<"hour" | "day" | "week">("day");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [paymentProvider, setPaymentProvider] = useState("cash");
+  const [checkout, setCheckout] = useState<CheckoutResponse | null>(null);
+  const [checkoutBookingId, setCheckoutBookingId] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -35,6 +61,11 @@ const Booking = () => {
     load();
   }, [id]);
 
+  useEffect(() => {
+    const methods = vehicle?.availablePaymentMethods?.length ? vehicle.availablePaymentMethods : ["cash"];
+    setPaymentProvider(methods[0] || "cash");
+  }, [vehicle]);
+
   const pricing = useMemo(() => {
     if (!vehicle || !startDate || !endDate) return { units: 0, total: 0, label: "" };
     const start = new Date(startDate);
@@ -44,6 +75,10 @@ const Booking = () => {
     if (durationType === "day") {
       const days = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
       return { units: days, total: days * vehicle.pricePerDay, label: `${days} day${days === 1 ? "" : "s"}` };
+    }
+    if (durationType === "week") {
+      const weeks = Math.ceil(diffMs / (1000 * 60 * 60 * 24 * 7));
+      return { units: weeks, total: weeks * (vehicle.pricePerWeek || vehicle.pricePerDay * 7), label: `${weeks} week${weeks === 1 ? "" : "s"}` };
     }
     const hours = Math.ceil(diffMs / (1000 * 60 * 60));
     return { units: hours, total: hours * vehicle.pricePerHour, label: `${hours} hour${hours === 1 ? "" : "s"}` };
@@ -79,6 +114,8 @@ const Booking = () => {
   }
 
   const handleConfirm = async () => {
+    setCheckout(null);
+    setCheckoutBookingId("");
     const missingProfile =
       !user?.phone || !user?.address || !user?.city || !user?.pincode || !user?.aadhaarNumber;
     if (missingProfile) {
@@ -90,19 +127,98 @@ const Booking = () => {
       toast.error("Please select valid dates");
       return;
     }
-    const ok = await createBooking({
-      vehicleId: vehicle.id,
-      durationType,
-      startDate,
-      endDate,
-    });
-    if (ok) {
-      toast.success("Booking request sent! Await admin confirmation.");
-      navigate("/my-bookings");
-    } else {
-      toast.error("Booking failed");
+    if (!token) return;
+    setSubmitting(true);
+    try {
+      const booking = await api.createBooking(token, {
+        vehicleId: vehicle.id,
+        durationType,
+        startDate,
+        endDate,
+      });
+      const bookingId = booking._id || booking.id || "";
+      const payment = await api.createCustomerRentalPayment(token, { bookingId, provider: paymentProvider });
+      setCheckout(payment);
+      setCheckoutBookingId(bookingId);
+
+      if (payment.checkout?.provider === "razorpay" && payment.checkout.keyId && payment.checkout.orderId) {
+        const loaded = await loadRazorpayCheckout();
+        if (!loaded || !window.Razorpay) {
+          toast.error("Razorpay checkout could not load. Please try again.");
+          return;
+        }
+        const checkout = new window.Razorpay({
+          key: payment.checkout.keyId,
+          amount: payment.checkout.amount,
+          currency: payment.checkout.currency || "INR",
+          name: tenant?.companyName || "MotoRentix Rental",
+          description: vehicle.name,
+          order_id: payment.checkout.orderId,
+          prefill: {
+            name: user?.name,
+            email: user?.email,
+            contact: user?.phone,
+          },
+          notes: {
+            bookingId,
+            paymentId: payment.payment._id || payment.payment.id || "",
+          },
+          handler: () => {
+            toast.success("Payment submitted. Booking will confirm automatically after gateway verification.");
+            loadBookings();
+            navigate(`/booking-status/${bookingId}`, { state: { provider: "razorpay", paymentStatus: "pending" } });
+          },
+          modal: {
+            ondismiss: () => toast.info("Payment popup closed. Your booking is pending payment."),
+          },
+        });
+        checkout.open();
+        return;
+      }
+
+      if (payment.checkout?.provider === "stripe" && payment.checkout.redirectUrl) {
+        window.location.assign(payment.checkout.redirectUrl);
+        return;
+      }
+
+      if (payment.checkout?.provider === "payu" && payment.checkout.form) {
+        const form = document.createElement("form");
+        form.method = payment.checkout.form.method || "POST";
+        form.action = payment.checkout.form.action;
+        form.style.display = "none";
+        Object.entries(payment.checkout.form.fields).forEach(([name, value]) => {
+          const input = document.createElement("input");
+          input.type = "hidden";
+          input.name = name;
+          input.value = String(value);
+          form.appendChild(input);
+        });
+        document.body.appendChild(form);
+        form.submit();
+        return;
+      }
+
+      if (payment.checkout?.provider === "upi") {
+        toast.success("UPI QR generated for the exact booking amount");
+        await loadBookings();
+        return;
+      }
+
+      toast.success(
+        "Booking created. Payment is pending gateway confirmation.",
+      );
+      await loadBookings();
+      navigate(`/booking-status/${bookingId}`, { state: { provider: paymentProvider, paymentStatus: payment.payment.status || "pending" } });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Booking or payment failed");
+    } finally {
+      setSubmitting(false);
     }
   };
+
+  const tenant = vehicle.tenantId && typeof vehicle.tenantId === "object" ? vehicle.tenantId : null;
+  const branch = vehicle.branchId && typeof vehicle.branchId === "object" ? vehicle.branchId : null;
+  const paymentMethods = vehicle.availablePaymentMethods?.length ? vehicle.availablePaymentMethods : ["cash"];
 
   return (
     <div className="section-padding bg-background min-h-screen">
@@ -110,6 +226,10 @@ const Booking = () => {
         <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-6">
           <ArrowLeft size={18} /> Back
         </button>
+
+        <div className="mb-8">
+          <PublicWorkflowBar current="checkout" />
+        </div>
 
         <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="font-heading text-3xl font-bold text-foreground mb-8">
           Book {vehicle.name}
@@ -158,7 +278,7 @@ const Booking = () => {
 
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">Duration Type</label>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-3">
                   <button
                     type="button"
                     onClick={() => setDurationType("hour")}
@@ -176,6 +296,15 @@ const Booking = () => {
                     }`}
                   >
                     <CalendarDays size={16} /> Daily
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDurationType("week")}
+                    className={`flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm transition-all ${
+                      durationType === "week" ? "bg-primary text-primary-foreground" : "glass text-foreground hover:bg-secondary"
+                    }`}
+                  >
+                    <CalendarDays size={16} /> Weekly
                   </button>
                 </div>
               </div>
@@ -206,10 +335,22 @@ const Booking = () => {
                   <span className="text-muted-foreground">Vehicle</span>
                   <span className="font-semibold text-foreground">{vehicle.name}</span>
                 </div>
+                <div className="flex justify-between gap-4 text-sm">
+                  <span className="text-muted-foreground">Rental company</span>
+                  <span className="text-right font-semibold text-foreground">{tenant?.companyName || "Verified rental company"}</span>
+                </div>
+                <div className="flex justify-between gap-4 text-sm">
+                  <span className="text-muted-foreground">Pickup branch</span>
+                  <span className="text-right font-semibold text-foreground">{branch?.name || branch?.city || "Assigned after booking"}</span>
+                </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Rate</span>
                   <span className="font-semibold text-foreground">
-                    {durationType === "hour" ? `INR ${vehicle.pricePerHour}/hr` : `INR ${vehicle.pricePerDay}/day`}
+                    {durationType === "hour"
+                      ? `INR ${vehicle.pricePerHour}/hr`
+                      : durationType === "week"
+                        ? `INR ${vehicle.pricePerWeek || vehicle.pricePerDay * 7}/week`
+                        : `INR ${vehicle.pricePerDay}/day`}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
@@ -221,6 +362,79 @@ const Booking = () => {
                   <span className="font-heading text-2xl font-bold text-primary">INR {pricing.total}</span>
                 </div>
               </div>
+
+              <div className="rounded-2xl border border-border/60 bg-background/60 p-5">
+                <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                  <Building2 size={16} className="text-primary" />
+                  Payment goes to {tenant?.companyName || "this rental company"}
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {paymentMethods.map((method) => (
+                    <button
+                      key={method}
+                      type="button"
+                      onClick={() => setPaymentProvider(method)}
+                      className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold uppercase ${
+                        paymentProvider === method ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"
+                      }`}
+                    >
+                      <CreditCard size={13} className={paymentProvider === method ? "text-primary-foreground" : "text-primary"} />
+                      {method}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {checkout?.checkout?.provider === "upi" && (
+                <div className="rounded-2xl border border-primary/20 bg-primary/5 p-5">
+                  <div className="flex items-center gap-2 text-sm font-bold text-foreground">
+                    <QrCode size={17} className="text-primary" />
+                    Scan & pay exact amount
+                  </div>
+                  <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-[180px_1fr] sm:items-center">
+                    {checkout.checkout.qrDataUrl && (
+                      <img
+                        src={checkout.checkout.qrDataUrl}
+                        alt={`UPI QR for INR ${checkout.checkout.amount || pricing.total}`}
+                        className="mx-auto h-44 w-44 rounded-2xl border border-border bg-white p-2 shadow-sm"
+                      />
+                    )}
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between gap-4">
+                        <span className="text-muted-foreground">UPI ID</span>
+                        <span className="text-right font-semibold text-foreground">{checkout.checkout.upiId}</span>
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <span className="text-muted-foreground">Payee</span>
+                        <span className="text-right font-semibold text-foreground">{checkout.checkout.displayName || tenant?.companyName || "Rental company"}</span>
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <span className="text-muted-foreground">Amount</span>
+                        <span className="text-right font-heading text-lg font-bold text-primary">INR {checkout.checkout.amount || pricing.total}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">{checkout.checkout.note}</p>
+                      {checkout.checkout.upiIntentUrl && (
+                        <a
+                          href={checkout.checkout.upiIntentUrl}
+                          className="btn-primary-gradient mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold text-primary-foreground"
+                        >
+                          Open UPI app <ExternalLink size={15} />
+                        </a>
+                      )}
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          await loadBookings();
+                          navigate(`/booking-status/${checkoutBookingId}`, { state: { provider: "upi", paymentStatus: checkout.payment.status || "pending" } });
+                        }}
+                        className="w-full rounded-xl border border-border bg-card px-4 py-3 text-sm font-semibold text-foreground hover:bg-secondary"
+                      >
+                        I have paid
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="rounded-2xl border border-border/60 bg-background/60 p-5 space-y-2">
                 <p className="text-xs text-muted-foreground uppercase tracking-wider">Your details</p>
@@ -246,10 +460,16 @@ const Booking = () => {
 
               <button
                 onClick={handleConfirm}
-                disabled={pricing.total <= 0 || !vehicle.availability || !user?.phone || !user?.address || !user?.city || !user?.pincode || !user?.aadhaarNumber}
+                disabled={submitting || pricing.total <= 0 || !vehicle.availability || !user?.phone || !user?.address || !user?.city || !user?.pincode || !user?.aadhaarNumber}
                 className="w-full btn-primary-gradient py-3.5 rounded-xl font-semibold text-primary-foreground text-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Request Booking
+                {submitting
+                  ? "Preparing checkout..."
+                  : paymentProvider === "upi"
+                    ? "Generate UPI QR"
+                    : ["razorpay", "stripe", "payu"].includes(paymentProvider)
+                      ? `Pay with ${paymentProvider.toUpperCase()}`
+                      : "Request Booking"}
               </button>
 
               <p className="text-xs text-muted-foreground">

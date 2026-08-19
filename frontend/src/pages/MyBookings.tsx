@@ -3,12 +3,18 @@ import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { CalendarDays, IndianRupee, Clock, CheckCircle, XCircle, AlertCircle, Bike } from "lucide-react";
 import { useStore } from "@/store/useStore";
+import PublicWorkflowBar from "@/components/PublicWorkflowBar";
+import type { BookingStatus } from "@/lib/types";
 
-const statusConfig = {
+const statusConfig: Record<BookingStatus, { icon: typeof CheckCircle; className: string }> = {
   confirmed: { icon: CheckCircle, className: "text-primary bg-primary/10" },
+  running: { icon: Clock, className: "text-primary bg-primary/10" },
   completed: { icon: AlertCircle, className: "text-success bg-success/10" },
   pending: { icon: AlertCircle, className: "text-accent bg-accent/10" },
   rejected: { icon: XCircle, className: "text-destructive bg-destructive/10" },
+  cancelled: { icon: XCircle, className: "text-destructive bg-destructive/10" },
+  refunded: { icon: AlertCircle, className: "text-muted-foreground bg-secondary" },
+  overdue: { icon: AlertCircle, className: "text-accent bg-accent/10" },
 };
 
 const MyBookings = () => {
@@ -41,6 +47,10 @@ const MyBookings = () => {
           <h1 className="font-heading text-3xl md:text-4xl font-bold text-foreground">My Bookings</h1>
           <p className="text-muted-foreground mt-2">Track all your rental history</p>
         </motion.div>
+
+        <div className="mb-8">
+          <PublicWorkflowBar current="confirmed" />
+        </div>
 
         {bookings.length === 0 ? (
           <div className="glass rounded-2xl p-12 text-center">

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import { optimizeImageUrl } from "@/lib/assetUrl";
 
 type VehicleImageGalleryProps = {
   images: string[];
@@ -65,7 +66,7 @@ const VehicleImageGallery = ({ images, alt, className }: VehicleImageGalleryProp
             >
               {ok ? (
                 <img
-                  src={src}
+                  src={optimizeImageUrl(src, { width: 180, height: 180, quality: 72 })}
                   alt={`${alt} thumbnail ${idx + 1}`}
                   className="h-full w-full object-cover"
                   onError={() => setImageOk((prev) => ({ ...prev, [idx]: false }))}
@@ -85,7 +86,7 @@ const VehicleImageGallery = ({ images, alt, className }: VehicleImageGalleryProp
             {mainSrc && imageOk[activeIndex] !== false ? (
               <>
                 <img
-                  src={mainSrc}
+                  src={optimizeImageUrl(mainSrc, { width: 1200, height: 900, quality: 80 })}
                   alt={alt}
                   className="h-full w-full object-cover transition-transform duration-700 hover:scale-[1.04]"
                   onError={() => setImageOk((prev) => ({ ...prev, [activeIndex]: false }))}
@@ -107,4 +108,3 @@ const VehicleImageGallery = ({ images, alt, className }: VehicleImageGalleryProp
 };
 
 export default VehicleImageGallery;
-

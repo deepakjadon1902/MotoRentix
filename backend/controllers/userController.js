@@ -1,6 +1,7 @@
 import Booking from "../models/Booking.js";
 import asyncHandler from "../middleware/asyncHandler.js";
 import User from "../models/User.js";
+import jwt from "jsonwebtoken";
 
 export const getProfile = asyncHandler(async (req, res) => {
   res.json(req.user);
@@ -44,4 +45,41 @@ export const updateProfile = asyncHandler(async (req, res) => {
     role: user.role,
     status: user.status,
   });
+});
+
+export const updatePassword = asyncHandler(async (req, res) => {
+  const { currentPassword, newPassword, resetToken } = req.body;
+  if (!newPassword || String(newPassword).length < 6) {
+    return res.status(400).json({ message: "New password must be at least 6 characters" });
+  }
+
+  const user = await User.findById(req.user.id);
+  if (!user) {
+    return res.status(404).json({ message: "User not found" });
+  }
+
+  let authorizedByReset = false;
+  if (resetToken) {
+    try {
+      const payload = jwt.verify(resetToken, process.env.JWT_SECRET);
+      authorizedByReset = payload?.purpose === "password_reset" && payload?.sub === user.id;
+    } catch {
+      return res.status(401).json({ message: "Password reset session expired. Please verify OTP again." });
+    }
+  }
+
+  if (!authorizedByReset) {
+    if (!currentPassword) {
+      return res.status(400).json({ message: "Current password is required" });
+    }
+    const ok = await user.comparePassword(currentPassword);
+    if (!ok) {
+      return res.status(401).json({ message: "Current password is incorrect" });
+    }
+  }
+
+  user.password = newPassword;
+  await user.save();
+
+  res.json({ message: "Password updated successfully" });
 });

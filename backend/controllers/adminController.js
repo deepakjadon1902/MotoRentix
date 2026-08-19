@@ -2,9 +2,27 @@ import User from "../models/User.js";
 import Vehicle from "../models/Vehicle.js";
 import Booking from "../models/Booking.js";
 import Message from "../models/Message.js";
+import Subscription from "../models/Subscription.js";
+import Tenant from "../models/Tenant.js";
+import TenantDomain from "../models/TenantDomain.js";
+import SubscriptionPlan from "../models/SubscriptionPlan.js";
+import Payment from "../models/Payment.js";
+import Branch from "../models/Branch.js";
 import asyncHandler from "../middleware/asyncHandler.js";
 import { generateToken } from "../utils/jwt.js";
 import { verifyGoogleIdToken } from "../utils/googleAuth.js";
+import { uploadImageFiles } from "../utils/imageKit.js";
+import { sendMail } from "../utils/mail.js";
+import crypto from "crypto";
+import {
+  activateSubscriptionLifecycle,
+  addBillingPeriod,
+  expireOverdueSubscriptions,
+  getPlanAmount,
+  setTenantAccess,
+  subscriptionDateFields,
+} from "../utils/subscriptionLifecycle.js";
+import { writeAuditLog } from "../utils/audit.js";
 
 export const adminLogin = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
@@ -77,12 +95,12 @@ export const addVehicle = asyncHandler(async (req, res) => {
 
   const files = req.files && typeof req.files === "object" ? req.files : {};
   const pickFiles = (key) => (Array.isArray(files[key]) ? files[key] : []);
-  const uploaded = [
+  const imageFiles = [
     ...pickFiles("images"),
     ...pickFiles("image"),
   ]
-    .filter(Boolean)
-    .map((file) => `/uploads/${file.filename}`);
+    .filter(Boolean);
+  const uploaded = await uploadImageFiles(imageFiles);
 
   const fallbackImage = typeof req.body.image === "string" ? req.body.image : "";
   const images = uploaded.length > 0 ? uploaded : fallbackImage ? [fallbackImage] : [];
@@ -113,12 +131,12 @@ export const updateVehicle = asyncHandler(async (req, res) => {
 
   const files = req.files && typeof req.files === "object" ? req.files : {};
   const pickFiles = (key) => (Array.isArray(files[key]) ? files[key] : []);
-  const uploaded = [
+  const imageFiles = [
     ...pickFiles("images"),
     ...pickFiles("image"),
   ]
-    .filter(Boolean)
-    .map((file) => `/uploads/${file.filename}`);
+    .filter(Boolean);
+  const uploaded = await uploadImageFiles(imageFiles);
 
   const updates = { ...req.body };
   if (uploaded.length > 0) {
@@ -149,6 +167,23 @@ export const deleteVehicle = asyncHandler(async (req, res) => {
 
   await vehicle.deleteOne();
   res.json({ message: "Vehicle deleted" });
+});
+
+export const listVehiclesForAdmin = asyncHandler(async (req, res) => {
+  const vehicles = await Vehicle.find()
+    .populate("tenantId", "companyName ownerName email phone status")
+    .populate("branchId", "name city address status")
+    .sort({ createdAt: -1 });
+
+  res.json(
+    vehicles.map((vehicle) => {
+      const obj = vehicle.toObject();
+      if ((!Array.isArray(obj.images) || obj.images.length === 0) && obj.image) {
+        obj.images = [obj.image];
+      }
+      return obj;
+    })
+  );
 });
 
 export const listUsers = asyncHandler(async (req, res) => {
@@ -182,7 +217,7 @@ export const listBookings = asyncHandler(async (req, res) => {
 
 export const updateBookingStatus = asyncHandler(async (req, res) => {
   const { status } = req.body;
-  if (!["pending", "confirmed", "rejected", "completed"].includes(status)) {
+  if (!["pending", "confirmed", "running", "completed", "cancelled", "rejected", "refunded", "overdue"].includes(status)) {
     return res.status(400).json({ message: "Invalid status" });
   }
 
@@ -198,11 +233,13 @@ export const updateBookingStatus = asyncHandler(async (req, res) => {
 });
 
 export const analytics = asyncHandler(async (req, res) => {
-  const [totalUsers, totalBookings, totalVehicles, activeUsers] = await Promise.all([
+  const [totalUsers, totalBookings, totalVehicles, activeUsers, activeSubscriptions, totalTenants] = await Promise.all([
     User.countDocuments(),
     Booking.countDocuments(),
     Vehicle.countDocuments(),
     User.countDocuments({ status: "active" }),
+    Subscription.countDocuments({ status: { $in: ["trial", "active", "renewal_due"] } }),
+    Tenant.countDocuments(),
   ]);
 
   const now = new Date();
@@ -221,14 +258,115 @@ export const analytics = asyncHandler(async (req, res) => {
 
   const monthlyRevenue = revenueAgg[0]?.total || 0;
 
-  res.json({ totalUsers, totalBookings, totalVehicles, activeUsers, monthlyRevenue });
+  const subscriptionRevenueAgg = await Payment.aggregate([
+    {
+      $match: {
+        paymentFor: "owner_subscription",
+        status: "paid",
+        createdAt: { $gte: monthStart, $lt: monthEnd },
+      },
+    },
+    { $group: { _id: null, total: { $sum: "$amount" } } },
+  ]);
+
+  const subscriptionRevenue = subscriptionRevenueAgg[0]?.total || 0;
+
+  res.json({
+    totalUsers,
+    totalBookings,
+    totalVehicles,
+    activeUsers,
+    monthlyRevenue,
+    activeSubscriptions,
+    subscriptionRevenue,
+    totalTenants,
+  });
 });
 
 export const listMessages = asyncHandler(async (req, res) => {
   const messages = await Message.find()
-    .populate("userId", "name email")
+    .populate("userId", "name email role tenantId")
+    .populate("sentByAdminId", "name email")
     .sort({ createdAt: -1 });
   res.json(messages);
+});
+
+export const sendAdminMessage = asyncHandler(async (req, res) => {
+  const {
+    audience = "selected",
+    recipientIds = [],
+    subject = "",
+    message,
+  } = req.body;
+
+  if (!message?.trim()) {
+    return res.status(400).json({ message: "Message is required" });
+  }
+
+  if (!["selected", "users", "clients", "collective"].includes(audience)) {
+    return res.status(400).json({ message: "Invalid audience" });
+  }
+
+  const baseFilter = { status: { $ne: "blocked" }, role: { $ne: "admin" } };
+  const filter = audience === "selected"
+    ? { ...baseFilter, _id: { $in: Array.isArray(recipientIds) ? recipientIds : [] } }
+    : audience === "users"
+      ? { ...baseFilter, role: "user" }
+      : audience === "clients"
+        ? { ...baseFilter, role: "owner" }
+        : { ...baseFilter, role: { $in: ["user", "owner"] } };
+
+  if (audience === "selected" && (!Array.isArray(recipientIds) || recipientIds.length === 0)) {
+    return res.status(400).json({ message: "Select at least one recipient" });
+  }
+
+  const recipients = await User.find(filter).select("name email role");
+  if (recipients.length === 0) {
+    return res.status(400).json({ message: "No recipients found" });
+  }
+
+  const created = await Message.insertMany(
+    recipients.map((recipient) => ({
+      userId: recipient.id,
+      sentByAdminId: req.user.id,
+      direction: "admin_to_user",
+      audience,
+      subject: subject?.trim(),
+      message: message.trim(),
+      adminReply: "",
+    }))
+  );
+
+  await Promise.allSettled(
+    recipients
+      .filter((recipient) => recipient.email)
+      .map((recipient) =>
+        sendMail({
+          to: recipient.email,
+          subject: subject?.trim() || "MotoRentix admin message",
+          text: `Hi ${recipient.name || "there"},\n\n${message.trim()}\n\nThanks,\nMotoRentix`,
+          html: `
+            <div style="font-family:Arial,sans-serif;line-height:1.6;color:#172033">
+              <h2 style="color:#0b5ed7">${subject?.trim() || "MotoRentix admin message"}</h2>
+              <p>Hi ${recipient.name || "there"},</p>
+              <p>${message.trim().replace(/\n/g, "<br />")}</p>
+              <p style="color:#5f6b7a">Thanks,<br />MotoRentix</p>
+            </div>
+          `,
+        })
+      )
+  );
+
+  res.status(201).json({
+    message: "Message sent",
+    count: created.length,
+    recipients: recipients.map((recipient) => ({
+      id: recipient.id,
+      name: recipient.name,
+      email: recipient.email,
+      role: recipient.role,
+    })),
+  });
 });
 
 export const replyMessage = asyncHandler(async (req, res) => {
@@ -237,7 +375,7 @@ export const replyMessage = asyncHandler(async (req, res) => {
     return res.status(400).json({ message: "messageId and adminReply are required" });
   }
 
-  const message = await Message.findById(messageId);
+  const message = await Message.findById(messageId).populate("userId", "name email");
   if (!message) {
     return res.status(404).json({ message: "Message not found" });
   }
@@ -245,5 +383,474 @@ export const replyMessage = asyncHandler(async (req, res) => {
   message.adminReply = adminReply;
   await message.save();
 
+  if (message.userId?.email) {
+    try {
+      await sendMail({
+        to: message.userId.email,
+        subject: "MotoRentix support replied to your message",
+        text: `Hi ${message.userId.name || "there"},\n\n${adminReply}\n\nThanks,\nMotoRentix`,
+        html: `
+          <div style="font-family:Arial,sans-serif;line-height:1.6;color:#172033">
+            <h2 style="color:#0b5ed7">MotoRentix support replied</h2>
+            <p>Hi ${message.userId.name || "there"},</p>
+            <p>${adminReply.replace(/\n/g, "<br />")}</p>
+            <p style="color:#5f6b7a">Thanks,<br />MotoRentix</p>
+          </div>
+        `,
+      });
+    } catch (error) {
+      console.warn("Resend email delivery failed:", error.message);
+    }
+  }
+
   res.json({ message: "Reply sent", data: message });
+});
+
+export const listSubscriptions = asyncHandler(async (req, res) => {
+  await expireOverdueSubscriptions();
+  const subscriptions = await Subscription.find()
+    .populate("tenantId", "companyName ownerName email phone status")
+    .populate("planId", "name code monthlyPrice yearlyPrice")
+    .sort({ createdAt: -1 });
+  res.json(subscriptions);
+});
+
+export const createSubscription = asyncHandler(async (req, res) => {
+  const {
+    tenantId,
+    planId,
+    billingCycle,
+    status,
+    paymentStatus,
+    autoRenew,
+    startDate,
+    endDate,
+  } = req.body;
+
+  if (!tenantId || !planId) {
+    return res.status(400).json({ message: "tenantId and planId are required" });
+  }
+  if (billingCycle && !["monthly", "quarterly", "half_yearly", "yearly", "custom"].includes(billingCycle)) {
+    return res.status(400).json({ message: "Invalid billing cycle" });
+  }
+
+  const [tenant, plan] = await Promise.all([
+    Tenant.findById(tenantId),
+    SubscriptionPlan.findById(planId),
+  ]);
+  if (!tenant) {
+    return res.status(404).json({ message: "Tenant not found" });
+  }
+  if (!plan) {
+    return res.status(404).json({ message: "Plan not found" });
+  }
+
+  const starts = startDate ? new Date(startDate) : new Date();
+  const ends = endDate ? new Date(endDate) : addBillingPeriod(billingCycle, starts);
+  const subscription = await Subscription.create({
+    tenantId,
+    planId,
+    billingCycle,
+    status,
+    paymentStatus,
+    autoRenew,
+    ...subscriptionDateFields(starts, ends),
+  });
+
+  await Subscription.updateMany(
+    { tenantId, _id: { $ne: subscription._id }, status: { $in: ["trial", "active", "renewal_due", "past_due"] } },
+    { status: "cancelled", autoRenew: false }
+  );
+
+  tenant.planId = plan.id;
+  tenant.subscriptionId = subscription.id;
+  tenant.status = ["trial", "active"].includes(subscription.status) && paymentStatus === "paid" ? "active" : tenant.status;
+  await tenant.save();
+  if (["trial", "active"].includes(subscription.status) && paymentStatus === "paid") {
+    const payment = await Payment.create({
+      tenantId: tenant.id,
+      subscriptionId: subscription.id,
+      paymentFor: "owner_subscription",
+      provider: "manual",
+      amount: getPlanAmount(plan, billingCycle),
+      currency: "INR",
+      status: "paid",
+      metadata: { source: "super_admin_subscription_assignment" },
+    });
+    await activateSubscriptionLifecycle({
+      subscription,
+      plan,
+      payment,
+      source: "super_admin_subscription_assignment",
+    });
+  }
+
+  res.status(201).json(subscription);
+});
+
+export const updateSubscription = asyncHandler(async (req, res) => {
+  const subscription = await Subscription.findById(req.params.id);
+  if (!subscription) {
+    return res.status(404).json({ message: "Subscription not found" });
+  }
+
+  const allowed = [
+    "planId",
+    "billingCycle",
+    "status",
+    "paymentStatus",
+    "autoRenew",
+    "startDate",
+    "endDate",
+    "gracePeriodDays",
+  ];
+  allowed.forEach((key) => {
+    if (req.body[key] !== undefined) {
+      subscription[key] = req.body[key];
+    }
+  });
+  if (req.body.startDate || req.body.endDate) {
+    const starts = new Date(subscription.startDate || new Date());
+    const ends = new Date(subscription.endDate);
+    Object.assign(subscription, subscriptionDateFields(starts, ends, subscription.gracePeriodDays || 7));
+  }
+
+  await subscription.save();
+  if (["cancelled", "expired", "suspended", "blocked_by_admin"].includes(subscription.status)) {
+    await setTenantAccess(subscription.tenantId, false, subscription.status);
+  } else if (subscription.status === "active" && subscription.paymentStatus === "paid" && new Date(subscription.endDate) > new Date()) {
+    await activateSubscriptionLifecycle({
+      subscription,
+      source: "super_admin_subscription_update",
+      sendWelcome: false,
+    });
+  }
+  res.json(subscription);
+});
+
+export const deleteSubscription = asyncHandler(async (req, res) => {
+  const subscription = await Subscription.findById(req.params.id);
+  if (!subscription) {
+    return res.status(404).json({ message: "Subscription not found" });
+  }
+
+  await subscription.deleteOne();
+  res.json({ message: "Subscription deleted" });
+});
+
+export const listTenants = asyncHandler(async (req, res) => {
+  await expireOverdueSubscriptions();
+  const tenants = await Tenant.find()
+    .populate("planId", "name code monthlyPrice yearlyPrice bikeLimit staffLimit branchLimit")
+    .populate("subscriptionId", "status paymentStatus billingCycle endDate")
+    .sort({ createdAt: -1 });
+  res.json(tenants);
+});
+
+export const createTenantClient = asyncHandler(async (req, res) => {
+  const {
+    companyName,
+    ownerName,
+    email,
+    phone,
+    password,
+    planId,
+    billingCycle = "monthly",
+    paymentStatus = "paid",
+    startDate,
+    endDate,
+  } = req.body;
+
+  if (!companyName || !ownerName || !email || !phone || !password || !planId) {
+    return res.status(400).json({ message: "companyName, ownerName, email, phone, password, and planId are required" });
+  }
+  if (!["monthly", "quarterly", "half_yearly", "yearly", "custom"].includes(billingCycle)) {
+    return res.status(400).json({ message: "Invalid billing cycle" });
+  }
+
+  const normalizedEmail = email.toLowerCase();
+  const [existingUser, existingTenant, plan] = await Promise.all([
+    User.findOne({ email: normalizedEmail }),
+    Tenant.findOne({ email: normalizedEmail }),
+    SubscriptionPlan.findById(planId),
+  ]);
+
+  if (existingUser || existingTenant) {
+    return res.status(409).json({ message: "A client already exists with this email" });
+  }
+  if (!plan || !plan.active) {
+    return res.status(404).json({ message: "Active plan not found" });
+  }
+
+  const starts = startDate ? new Date(startDate) : new Date();
+  const ends = endDate ? new Date(endDate) : addBillingPeriod(billingCycle, starts);
+  const isActive = paymentStatus === "paid" && ends > new Date();
+
+  const tenant = await Tenant.create({
+    companyName,
+    ownerName,
+    email: normalizedEmail,
+    phone,
+    planId: plan.id,
+    status: isActive ? "active" : "past_due",
+  });
+
+  const branch = await Branch.create({
+    tenantId: tenant.id,
+    name: "Main Branch",
+    phone,
+    status: "active",
+  });
+
+  const owner = await User.create({
+    name: ownerName,
+    email: normalizedEmail,
+    phone,
+    password,
+    role: "owner",
+    tenantId: tenant.id,
+    branchId: branch.id,
+    status: isActive ? "active" : "blocked",
+  });
+
+  const subscription = await Subscription.create({
+    tenantId: tenant.id,
+    planId: plan.id,
+    billingCycle,
+    ...subscriptionDateFields(starts, ends),
+    paymentStatus,
+    autoRenew: true,
+    status: isActive ? "active" : "past_due",
+  });
+
+  tenant.subscriptionId = subscription.id;
+  await tenant.save();
+
+  if (paymentStatus === "paid") {
+    const payment = await Payment.create({
+      tenantId: tenant.id,
+      subscriptionId: subscription.id,
+      paymentFor: "owner_subscription",
+      provider: "manual",
+      amount: getPlanAmount(plan, billingCycle),
+      currency: "INR",
+      status: "paid",
+      metadata: { source: "super_admin_client_creation" },
+    });
+    await activateSubscriptionLifecycle({
+      subscription,
+      plan,
+      payment,
+      source: "super_admin_client_creation",
+    });
+  }
+
+  await writeAuditLog(req, {
+    action: "client.create",
+    entityType: "Tenant",
+    entityId: tenant.id,
+    metadata: { planId: plan.id, billingCycle, paymentStatus },
+  });
+
+  res.status(201).json({ tenant, owner: { id: owner.id, name: owner.name, email: owner.email }, subscription });
+});
+
+export const assignTenantPlan = asyncHandler(async (req, res) => {
+  const { planId, billingCycle = "monthly", paymentStatus = "paid", startDate, endDate } = req.body;
+  if (!planId) {
+    return res.status(400).json({ message: "planId is required" });
+  }
+  if (!["monthly", "quarterly", "half_yearly", "yearly", "custom"].includes(billingCycle)) {
+    return res.status(400).json({ message: "Invalid billing cycle" });
+  }
+
+  const [tenant, plan] = await Promise.all([
+    Tenant.findById(req.params.id),
+    SubscriptionPlan.findById(planId),
+  ]);
+  if (!tenant) {
+    return res.status(404).json({ message: "Tenant not found" });
+  }
+  if (!plan || !plan.active) {
+    return res.status(404).json({ message: "Active plan not found" });
+  }
+
+  const starts = startDate ? new Date(startDate) : new Date();
+  const ends = endDate ? new Date(endDate) : addBillingPeriod(billingCycle, starts);
+  const isActive = paymentStatus === "paid" && ends > new Date();
+
+  await Subscription.updateMany(
+    { tenantId: tenant.id, status: { $in: ["trial", "active", "renewal_due", "past_due"] } },
+    { status: "cancelled", autoRenew: false }
+  );
+
+  const subscription = await Subscription.create({
+    tenantId: tenant.id,
+    planId: plan.id,
+    billingCycle,
+    ...subscriptionDateFields(starts, ends),
+    paymentStatus,
+    autoRenew: true,
+    status: isActive ? "active" : "past_due",
+  });
+
+  tenant.planId = plan.id;
+  tenant.subscriptionId = subscription.id;
+  tenant.status = isActive ? "active" : "past_due";
+  await tenant.save();
+  await setTenantAccess(tenant.id, isActive, isActive ? "active" : "past_due");
+
+  if (paymentStatus === "paid") {
+    const payment = await Payment.create({
+      tenantId: tenant.id,
+      subscriptionId: subscription.id,
+      paymentFor: "owner_subscription",
+      provider: "manual",
+      amount: getPlanAmount(plan, billingCycle),
+      currency: "INR",
+      status: "paid",
+      metadata: { source: "super_admin_plan_assignment" },
+    });
+    await activateSubscriptionLifecycle({
+      subscription,
+      plan,
+      payment,
+      source: "super_admin_plan_assignment",
+    });
+  }
+
+  await writeAuditLog(req, {
+    action: "client.assign_plan",
+    entityType: "Tenant",
+    entityId: tenant.id,
+    metadata: { planId: plan.id, subscriptionId: subscription.id, billingCycle, paymentStatus },
+  });
+
+  res.status(201).json({ tenant, subscription });
+});
+
+export const updateTenantStatus = asyncHandler(async (req, res) => {
+  const { status } = req.body;
+  if (!["pending", "trial", "active", "renewal_due", "expired", "suspended", "cancelled", "blocked_by_admin", "pending_verification", "past_due", "disabled"].includes(status)) {
+    return res.status(400).json({ message: "Invalid tenant status" });
+  }
+
+  const tenant = await Tenant.findById(req.params.id);
+  if (!tenant) {
+    return res.status(404).json({ message: "Tenant not found" });
+  }
+
+  tenant.status = status;
+  await tenant.save();
+  await User.updateMany({ tenantId: tenant.id, role: { $in: ["owner", "staff"] } }, {
+    status: ["disabled", "cancelled", "expired", "suspended", "blocked_by_admin"].includes(status) ? "blocked" : "active",
+  });
+
+  res.json({ message: "Tenant status updated", tenant });
+});
+
+export const listTenantDomainsForAdmin = asyncHandler(async (req, res) => {
+  const domains = await TenantDomain.find(req.params.id ? { tenantId: req.params.id } : {})
+    .populate("tenantId", "companyName email status")
+    .sort({ createdAt: -1 });
+  res.json(domains);
+});
+
+export const upsertTenantDomainForAdmin = asyncHandler(async (req, res) => {
+  const { domain, type = "custom", status = "pending_verification", isPrimary = false, sslStatus, dnsTarget } = req.body;
+  if (!domain?.trim()) {
+    return res.status(400).json({ message: "Domain is required" });
+  }
+  const tenant = await Tenant.findById(req.params.id);
+  if (!tenant) {
+    return res.status(404).json({ message: "Tenant not found" });
+  }
+
+  const normalizedDomain = domain.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+  const tenantDomain = await TenantDomain.findOneAndUpdate(
+    { tenantId: tenant.id, domain: normalizedDomain },
+    {
+      tenantId: tenant.id,
+      domain: normalizedDomain,
+      type,
+      status,
+      isPrimary,
+      sslStatus: sslStatus || (["active", "verified", "ssl_enabled"].includes(status) ? "active" : "pending"),
+      dnsTarget: dnsTarget || process.env.WHITE_LABEL_DNS_TARGET || "cname.motorentix.com",
+      verificationToken: `motorentix-${crypto.randomBytes(16).toString("hex")}`,
+      verifiedAt: ["active", "verified", "ssl_enabled"].includes(status) ? new Date() : undefined,
+      lastCheckedAt: new Date(),
+    },
+    { upsert: true, new: true, setDefaultsOnInsert: true }
+  );
+
+  if (isPrimary) {
+    await TenantDomain.updateMany({ tenantId: tenant.id, _id: { $ne: tenantDomain._id } }, { isPrimary: false });
+    tenant.primaryDomain = normalizedDomain;
+    if (type === "subdomain") tenant.freeSubdomain = normalizedDomain;
+    await tenant.save();
+  }
+
+  res.status(201).json(tenantDomain);
+});
+
+export const updateTenantDomainForAdmin = asyncHandler(async (req, res) => {
+  const domain = await TenantDomain.findById(req.params.domainId);
+  if (!domain) {
+    return res.status(404).json({ message: "Domain not found" });
+  }
+
+  ["domain", "type", "status", "isPrimary", "sslStatus", "dnsTarget", "redirectUrl"].forEach((key) => {
+    if (req.body[key] !== undefined) domain[key] = typeof req.body[key] === "string" ? req.body[key].trim().toLowerCase() : req.body[key];
+  });
+  if (["active", "verified", "ssl_enabled"].includes(domain.status)) {
+    domain.verifiedAt = domain.verifiedAt || new Date();
+    domain.suspendedAt = undefined;
+    domain.redirectUrl = "";
+  }
+  if (["disabled", "redirected", "expired"].includes(domain.status)) {
+    domain.suspendedAt = domain.suspendedAt || new Date();
+  }
+  domain.lastCheckedAt = new Date();
+  await domain.save();
+
+  if (domain.isPrimary) {
+    await TenantDomain.updateMany({ tenantId: domain.tenantId, _id: { $ne: domain._id } }, { isPrimary: false });
+    await Tenant.findByIdAndUpdate(domain.tenantId, {
+      primaryDomain: domain.domain,
+      ...(domain.type === "subdomain" ? { freeSubdomain: domain.domain } : {}),
+    });
+  }
+
+  res.json(domain);
+});
+
+export const listPlans = asyncHandler(async (req, res) => {
+  const plans = await SubscriptionPlan.find().sort({ sortOrder: 1, monthlyPrice: 1 });
+  res.json(plans);
+});
+
+export const createPlan = asyncHandler(async (req, res) => {
+  const plan = await SubscriptionPlan.create(req.body);
+  res.status(201).json(plan);
+});
+
+export const updatePlan = asyncHandler(async (req, res) => {
+  const plan = await SubscriptionPlan.findById(req.params.id);
+  if (!plan) {
+    return res.status(404).json({ message: "Plan not found" });
+  }
+
+  Object.assign(plan, req.body);
+  await plan.save();
+  res.json(plan);
+});
+
+export const listPayments = asyncHandler(async (req, res) => {
+  const payments = await Payment.find()
+    .populate("tenantId", "companyName email")
+    .populate("subscriptionId", "billingCycle status")
+    .populate("bookingId", "totalPrice status")
+    .sort({ createdAt: -1 });
+  res.json(payments);
 });

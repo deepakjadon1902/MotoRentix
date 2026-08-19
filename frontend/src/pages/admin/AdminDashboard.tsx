@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Bike, BookOpenCheck, Users, UserCheck, MessageCircle } from "lucide-react";
+import { BadgeCheck, Bike, BookOpenCheck, Users, UserCheck, MessageCircle } from "lucide-react";
 import { useAdminStore } from "@/store/adminStore";
 import { API_BASE_URL } from "@/lib/apiBase";
 
@@ -10,6 +10,8 @@ interface Overview {
   totalUsers: number;
   activeUsers: number;
   monthlyRevenue: number;
+  activeSubscriptions: number;
+  subscriptionRevenue: number;
 }
 
 const AdminDashboard = () => {
@@ -36,6 +38,8 @@ const AdminDashboard = () => {
           totalUsers: data.totalUsers ?? 0,
           activeUsers: data.activeUsers ?? 0,
           monthlyRevenue: data.monthlyRevenue ?? 0,
+          activeSubscriptions: data.activeSubscriptions ?? 0,
+          subscriptionRevenue: data.subscriptionRevenue ?? 0,
         });
       } catch {
         setError("Failed to load overview");
@@ -98,6 +102,14 @@ const AdminDashboard = () => {
       accent: "from-rose-500/30 to-rose-500/0",
       text: "text-rose-500",
     },
+    {
+      label: "Subscriptions",
+      value: overview?.activeSubscriptions ?? "-",
+      icon: BadgeCheck,
+      href: "/admin/subscriptions",
+      accent: "from-teal-500/30 to-teal-500/0",
+      text: "text-teal-500",
+    },
   ];
 
   return (
@@ -125,7 +137,7 @@ const AdminDashboard = () => {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-6">
         {kpis.map((kpi) => (
           <Link
             key={kpi.label}

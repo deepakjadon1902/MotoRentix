@@ -1,20 +1,23 @@
 import { useCallback, useEffect, useState } from "react";
 import { adminApi } from "@/lib/adminApi";
 import type { Vehicle } from "@/lib/types";
+import { useAdminStore } from "@/store/adminStore";
 
 const AdminVehiclesDetail = () => {
+  const token = useAdminStore((state) => state.token);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [error, setError] = useState("");
 
   const load = useCallback(async () => {
+    if (!token) return;
     try {
-      const data = await adminApi.listVehicles();
+      const data = await adminApi.listVehicles(token);
       setVehicles(data);
       setError("");
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to load vehicles");
     }
-  }, []);
+  }, [token]);
 
   useEffect(() => {
     load();

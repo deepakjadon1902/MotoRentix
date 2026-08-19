@@ -8,7 +8,7 @@ interface AppState {
   user: UserProfile | null;
   bookings: Booking[];
   messages: UserMessage[];
-  login: (email: string, password: string) => Promise<{ ok: boolean; message?: string }>;
+  login: (email: string, password: string) => Promise<{ ok: boolean; message?: string; user?: UserProfile }>;
   loginWithGoogle: (credential: string) => Promise<{ ok: boolean; message?: string }>;
   setSessionFromToken: (token: string) => Promise<UserProfile | null>;
   register: (
@@ -21,7 +21,7 @@ interface AppState {
   loadMessages: () => Promise<UserMessage[]>;
   createBooking: (payload: {
     vehicleId: string;
-    durationType: "hour" | "day";
+    durationType: "hour" | "day" | "week";
     startDate: string;
     endDate: string;
   }) => Promise<boolean>;
@@ -77,7 +77,7 @@ export const useStore = create<AppState>((set, get) => ({
       localStorage.setItem(userKey, JSON.stringify(data.user));
       set({ token: data.token, user: data.user, isAuthenticated: true });
       await get().loadBookings();
-      return { ok: true };
+      return { ok: true, user: data.user };
     } catch (err) {
       const raw = err instanceof Error ? err.message : "Login failed";
       return { ok: false, message: normalizeErrorMessage(raw) };
