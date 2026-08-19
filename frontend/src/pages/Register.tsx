@@ -6,7 +6,7 @@ import { useStore } from '@/store/useStore';
 import { toast } from 'sonner';
 import logo from '@/assets/logo.jpeg';
 import GoogleButton from '@/components/auth/GoogleButton';
-import { API_BASE_URL } from '@/lib/apiBase';
+import { apiUrl } from '@/lib/apiBase';
 
 type FormState = {
   name: string;
@@ -62,7 +62,7 @@ const Register = () => {
     }
   };
 
-  const googleHref = `${API_BASE_URL}/auth/google?role=user&next=${encodeURIComponent("/profile")}`;
+  const googleHref = `${apiUrl("/auth/google")}?role=user&next=${encodeURIComponent("/profile")}`;
 
   const fields: { key: keyof FormState; label: string; type: string; placeholder: string; half?: boolean }[] = [
     { key: 'name', label: 'Full Name', type: 'text', placeholder: 'John Doe' },

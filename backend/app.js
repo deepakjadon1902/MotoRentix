@@ -69,6 +69,18 @@ app.get("/health", (req, res) => {
   res.status(200).json({ status: "ok" });
 });
 
+app.use((req, res, next) => {
+  const queryIndex = req.url.indexOf("?");
+  const pathname = queryIndex === -1 ? req.url : req.url.slice(0, queryIndex);
+  const search = queryIndex === -1 ? "" : req.url.slice(queryIndex);
+  const normalizedPathname = pathname.replace(/\/{2,}/g, "/");
+  if (normalizedPathname !== pathname) {
+    res.redirect(308, `${normalizedPathname}${search}`);
+    return;
+  }
+  next();
+});
+
 const primaryUploadsDir = uploadsDir();
 const legacyDir = legacyUploadsDir();
 app.use("/uploads", express.static(primaryUploadsDir));
