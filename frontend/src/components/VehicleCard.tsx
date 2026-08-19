@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { Building2, CheckCircle2, MapPin, ShieldCheck, Star } from "lucide-react";
+import { MapPin } from "lucide-react";
+import { ProIcon } from "@/components/ProIcons";
 import type { Vehicle } from "@/lib/types";
 import { optimizeImageUrl } from "@/lib/assetUrl";
 
@@ -72,17 +73,17 @@ const VehicleCard = ({ vehicle, index = 0 }: VehicleCardProps) => {
           ) : (
             <div className="w-full h-full bg-secondary" />
           )}
-          <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.28),transparent_60%)]" />
+          <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-t from-slate-950/30 via-transparent to-white/10" />
           {!vehicle.availability && (
             <div className="absolute inset-0 bg-foreground/50 flex items-center justify-center">
-              <span className="bg-accent text-accent-foreground px-4 py-2 rounded-lg font-semibold text-sm">Not Available</span>
+            <span className="rounded-md bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground">Not Available</span>
             </div>
           )}
-          <div className="absolute left-2 top-2 flex items-center gap-1.5 rounded-full bg-background/90 px-2.5 py-1 text-[11px] font-semibold text-foreground shadow-sm backdrop-blur">
-            <Star className="fill-warning text-warning" size={13} />
+          <div className="absolute left-2 top-2 flex items-center gap-1.5 rounded-md bg-background/90 px-2.5 py-1 text-[11px] font-semibold text-foreground shadow-sm backdrop-blur">
+            <ProIcon name="star" className="text-warning" size={13} />
             4.8
           </div>
-          <div className="absolute bottom-2 left-2 rounded-full bg-slate-950/75 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur">
+          <div className="absolute bottom-2 left-2 rounded-md bg-slate-950/75 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur">
             {images.length || 1} photos
           </div>
         </div>
@@ -91,11 +92,11 @@ const VehicleCard = ({ vehicle, index = 0 }: VehicleCardProps) => {
           <div className="min-h-[50px]">
             <div className="mb-2 flex items-start justify-between gap-2">
               <h3 className="line-clamp-2 font-heading text-sm font-bold leading-snug text-foreground sm:text-base">{vehicle.name}</h3>
-              <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold capitalize text-primary sm:text-[11px]">{vehicle.category?.replace("_", " ")}</span>
+              <span className="shrink-0 rounded-md bg-primary/10 px-2 py-0.5 text-[10px] font-bold capitalize text-primary sm:text-[11px]">{vehicle.category?.replace("_", " ")}</span>
             </div>
           </div>
 
-          <div className="space-y-1.5 rounded-xl bg-secondary/70 p-2.5">
+          <div className="space-y-1.5 rounded-md bg-secondary/70 p-2.5">
             <div className="flex items-center gap-2 text-xs font-medium text-foreground sm:text-sm">
               {tenant?.branding?.logoUrl ? (
                 <img
@@ -104,7 +105,7 @@ const VehicleCard = ({ vehicle, index = 0 }: VehicleCardProps) => {
                   className="h-5 w-5 rounded-full object-cover sm:h-6 sm:w-6"
                 />
               ) : (
-                <Building2 className="text-primary" size={16} />
+                <ProIcon name="building" className="text-primary" size={16} />
               )}
               <span className="truncate">Listed by {tenant?.companyName || "Verified rental company"}</span>
             </div>
@@ -115,15 +116,15 @@ const VehicleCard = ({ vehicle, index = 0 }: VehicleCardProps) => {
           </div>
 
           <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
-            <div className="rounded-lg border border-border bg-background p-2 sm:rounded-xl">
+            <div className="rounded-md border border-border bg-background p-2">
               <span className="text-[9px] font-semibold uppercase tracking-[0.08em] text-muted-foreground sm:text-[10px]">Hour</span>
               <p className="font-heading text-xs font-bold text-foreground sm:text-sm">INR {vehicle.pricePerHour}</p>
             </div>
-            <div className="rounded-lg border border-border bg-background p-2 sm:rounded-xl">
+            <div className="rounded-md border border-border bg-background p-2">
               <span className="text-[9px] font-semibold uppercase tracking-[0.08em] text-muted-foreground sm:text-[10px]">Day</span>
               <p className="font-heading text-xs font-bold text-foreground sm:text-sm">INR {vehicle.pricePerDay}</p>
             </div>
-            <div className="rounded-lg border border-border bg-background p-2 sm:rounded-xl">
+            <div className="rounded-md border border-border bg-background p-2">
               <span className="text-[9px] font-semibold uppercase tracking-[0.08em] text-muted-foreground sm:text-[10px]">Week</span>
               <p className="font-heading text-xs font-bold text-foreground sm:text-sm">INR {vehicle.pricePerWeek || vehicle.pricePerDay * 7}</p>
             </div>
@@ -131,8 +132,8 @@ const VehicleCard = ({ vehicle, index = 0 }: VehicleCardProps) => {
 
           <div className="flex flex-wrap gap-1.5">
             {["Verified company", "Secure payment"].map((item, itemIndex) => (
-              <span key={item} className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-semibold text-success sm:text-xs">
-                {itemIndex === 0 ? <ShieldCheck size={12} /> : <CheckCircle2 size={12} />}
+              <span key={item} className="inline-flex items-center gap-1 rounded-md bg-success/10 px-2 py-0.5 text-[10px] font-semibold text-success sm:text-xs">
+                <ProIcon name={itemIndex === 0 ? "shield" : "check"} size={12} />
                 {item}
               </span>
             ))}
@@ -140,7 +141,7 @@ const VehicleCard = ({ vehicle, index = 0 }: VehicleCardProps) => {
 
           <Link
             to={`/vehicle/${vehicle.id}`}
-            className="btn-primary-gradient block w-full rounded-xl py-2.5 text-center text-xs font-bold text-primary-foreground sm:text-sm"
+            className="btn-primary-gradient block w-full rounded-md py-2.5 text-center text-xs font-bold text-primary-foreground sm:text-sm"
           >
             View deal
           </Link>

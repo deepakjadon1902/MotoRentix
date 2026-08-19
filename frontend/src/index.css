@@ -34,7 +34,7 @@
     --input: 220 13% 91%;
     --ring: 217 91% 40%;
 
-    --radius: 0.75rem;
+    --radius: 0.5rem;
 
     --dark: 220 20% 10%;
     --dark-foreground: 0 0% 100%;
@@ -48,12 +48,9 @@
     --font-heading: 'Space Grotesk', sans-serif;
     --font-body: 'Plus Jakarta Sans', sans-serif;
 
-    --glass-bg: hsla(0, 0%, 100%, 0.7);
-    --glass-border: hsla(0, 0%, 100%, 0.3);
-    --glass-shadow: 0 8px 32px 0 hsla(220, 20%, 10%, 0.12);
-
-    --metallic-gradient: linear-gradient(135deg, hsla(0, 0%, 100%, 0.4) 0%, hsla(0, 0%, 100%, 0.1) 50%, hsla(0, 0%, 100%, 0.3) 100%);
-    --metallic-border: linear-gradient(135deg, hsla(217, 91%, 40%, 0.6), hsla(0, 84%, 50%, 0.4), hsla(217, 91%, 40%, 0.6));
+    --glass-bg: hsla(0, 0%, 100%, 0.84);
+    --glass-border: hsla(220, 13%, 82%, 0.75);
+    --glass-shadow: 0 18px 44px -34px hsla(220, 20%, 10%, 0.42);
 
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
@@ -199,24 +196,24 @@
   }
 
   .premium-card {
-    @apply rounded-2xl border border-border bg-card shadow-sm transition-all duration-300;
+    @apply rounded-lg border border-border bg-card shadow-sm transition-all duration-300;
   }
 
   .premium-card:hover {
     transform: translateY(-3px);
-    box-shadow: 0 22px 50px -28px hsl(var(--foreground) / 0.35);
+    box-shadow: 0 18px 42px -30px hsl(var(--foreground) / 0.35);
   }
 
   .marketplace-shell {
-    @apply rounded-3xl border border-border bg-card shadow-xl shadow-foreground/10;
+    @apply rounded-lg border border-border bg-card shadow-xl shadow-foreground/10;
   }
 
   .marketplace-search {
-    @apply rounded-2xl border border-border bg-background shadow-xl shadow-foreground/10;
+    @apply rounded-lg border border-border bg-background shadow-xl shadow-foreground/10;
   }
 
   .marketplace-pill {
-    @apply inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2 text-sm font-semibold text-foreground shadow-sm transition;
+    @apply inline-flex items-center gap-2 rounded-md border border-border bg-background px-4 py-2 text-sm font-semibold text-foreground shadow-sm transition;
   }
 
   .marketplace-pill:hover {
@@ -225,7 +222,7 @@
   }
 
   .royal-card {
-    @apply rounded-2xl border border-border bg-card shadow-sm transition-all duration-300;
+    @apply rounded-lg border border-border bg-card shadow-sm transition-all duration-300;
     box-shadow: 0 18px 46px -34px hsl(var(--foreground) / 0.42);
   }
 
@@ -235,7 +232,7 @@
   }
 
   .dashboard-surface {
-    @apply rounded-2xl border border-border bg-background/90 shadow-sm backdrop-blur-xl;
+    @apply rounded-lg border border-border bg-background/90 shadow-sm backdrop-blur-xl;
   }
 
   .focus-ring {

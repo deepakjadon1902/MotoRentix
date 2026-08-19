@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Bike, CalendarDays, ChevronRight, MapPin, Search, ShieldCheck, Sparkles, Zap } from 'lucide-react';
+import { ChevronRight, MapPin } from 'lucide-react';
+import { ProIcon, type ProIconName } from '@/components/ProIcons';
 import heroBike1 from '@/assets/hero-bike-1.jpg';
 import heroScooter1 from '@/assets/hero-scooter-1.jpg';
 import heroBike2 from '@/assets/hero-bike-2.jpg';
@@ -29,11 +30,11 @@ type HeroSliderProps = {
   onSearch: () => void;
 };
 
-const categories: Array<{ label: string; value: MarketplaceFilters['category'] | 'verified'; icon: typeof Bike }> = [
-  { label: 'Bikes', value: 'bike', icon: Bike },
-  { label: 'Scooters', value: 'scooter', icon: Zap },
-  { label: 'Electric', value: 'electric_bike', icon: Sparkles },
-  { label: 'Verified', value: 'verified', icon: ShieldCheck },
+const categories: Array<{ label: string; value: MarketplaceFilters['category'] | 'verified'; icon: ProIconName }> = [
+  { label: 'Bikes', value: 'bike', icon: 'bike' },
+  { label: 'Scooters', value: 'scooter', icon: 'bolt' },
+  { label: 'Electric', value: 'electric_bike', icon: 'gauge' },
+  { label: 'Verified', value: 'verified', icon: 'shield' },
 ];
 
 const HeroSlider = ({ filters, companies, resultCount, onFiltersChange, onSearch }: HeroSliderProps) => {
@@ -70,8 +71,8 @@ const HeroSlider = ({ filters, companies, resultCount, onFiltersChange, onSearch
           transition={{ duration: 0.7, delay: 0.2 }}
           className="max-w-3xl text-white"
         >
-          <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/12 px-4 py-2 text-sm font-semibold backdrop-blur">
-            <ShieldCheck size={16} />
+          <span className="inline-flex items-center gap-2 rounded-md border border-white/20 bg-white/12 px-4 py-2 text-sm font-semibold backdrop-blur">
+            <ProIcon name="shield" size={16} />
             Multi-company rental marketplace
           </span>
           <h1 className="font-heading mt-5 text-4xl font-bold leading-tight md:text-6xl lg:text-7xl">
@@ -104,17 +105,17 @@ const HeroSlider = ({ filters, companies, resultCount, onFiltersChange, onSearch
                 }}
                 className={`marketplace-pill min-w-max ${active ? 'border-primary text-primary ring-2 ring-primary/15' : ''}`}
               >
-                <item.icon size={17} />
+                <ProIcon name={item.icon} size={17} />
                 {item.label}
               </button>
             );
             })}
           </div>
 
-          <div className="grid grid-cols-1 gap-3 rounded-2xl border border-border bg-background p-3 md:grid-cols-[1fr_1fr_1fr_auto] md:items-end">
+          <div className="grid grid-cols-1 gap-3 rounded-lg border border-border bg-background p-3 md:grid-cols-[1fr_1fr_1fr_auto] md:items-end">
             <label className="block">
               <span className="mb-2 block text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">Location</span>
-              <div className="flex items-center gap-2 rounded-xl bg-secondary px-4 py-3">
+              <div className="flex items-center gap-2 rounded-md bg-secondary px-4 py-3">
                 <MapPin className="text-primary" size={18} />
                 <input
                   value={filters.location}
@@ -126,15 +127,15 @@ const HeroSlider = ({ filters, companies, resultCount, onFiltersChange, onSearch
             </label>
             <label className="block">
               <span className="mb-2 block text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">Pickup</span>
-              <div className="flex items-center gap-2 rounded-xl bg-secondary px-4 py-3">
-                <CalendarDays className="text-primary" size={18} />
+              <div className="flex items-center gap-2 rounded-md bg-secondary px-4 py-3">
+                <ProIcon name="calendar" className="text-primary" size={18} />
                 <span className="text-sm font-semibold text-foreground">Today or later</span>
               </div>
             </label>
             <label className="block">
               <span className="mb-2 block text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">Compare</span>
-              <div className="flex items-center gap-2 rounded-xl bg-secondary px-4 py-3">
-                <Search className="text-primary" size={18} />
+              <div className="flex items-center gap-2 rounded-md bg-secondary px-4 py-3">
+                <ProIcon name="search" className="text-primary" size={18} />
                 <select
                   value={filters.company}
                   onChange={(event) => onFiltersChange({ ...filters, company: event.target.value })}
@@ -150,7 +151,7 @@ const HeroSlider = ({ filters, companies, resultCount, onFiltersChange, onSearch
             <button
               type="button"
               onClick={onSearch}
-              className="btn-primary-gradient flex items-center justify-center gap-2 rounded-xl px-7 py-3.5 text-sm font-bold text-primary-foreground md:mb-0"
+              className="btn-primary-gradient flex items-center justify-center gap-2 rounded-md px-7 py-3.5 text-sm font-bold text-primary-foreground md:mb-0"
             >
               {resultCount > 0 ? `Search ${resultCount} rides` : 'Search rides'} <ChevronRight size={18} />
             </button>

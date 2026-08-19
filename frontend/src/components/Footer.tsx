@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import logo from '@/assets/logo.jpeg';
+import BrandMark from '@/components/BrandMark';
 
 const Footer = () => {
   const [showTerms, setShowTerms] = useState(false);
@@ -13,11 +13,7 @@ const Footer = () => {
         <div className="container mx-auto px-4 py-12 lg:px-8">
           <div className="grid grid-cols-1 items-start gap-8 md:grid-cols-[1.2fr_0.8fr_0.8fr_0.8fr]">
             <div className="flex flex-col gap-3">
-              <img
-                src={logo}
-                alt="MotoRentix"
-                className="h-12 w-12 self-start rounded-full bg-background object-cover p-1 shadow-lg ring-2 ring-background/70"
-              />
+              <BrandMark inverted logoClassName="h-12 w-12" />
               <p className="max-w-xs text-sm opacity-70">
                 Enterprise rental software for bike and scooter operators, with fast customer booking experiences.
               </p>
@@ -47,7 +43,7 @@ const Footer = () => {
           </div>
 
           <div className="mt-10 border-t border-background/10 pt-6 text-center">
-            <p className="text-sm opacity-50">Â© 2026 MotoRentix. All rights reserved.</p>
+            <p className="text-sm opacity-50">© 2026 MotoRentix. All rights reserved.</p>
           </div>
         </div>
       </footer>
@@ -87,3 +83,4 @@ const Footer = () => {
 };
 
 export default Footer;
+

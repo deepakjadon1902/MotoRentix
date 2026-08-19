@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { Bike, CheckCircle2, CreditCard, Gauge, ShieldCheck, Store, UserPlus, Zap } from "lucide-react";
+import { ProIcon, type ProIconName } from "@/components/ProIcons";
 import HeroSlider, { type MarketplaceFilters } from "@/components/HeroSlider";
 import VehicleCard from "@/components/VehicleCard";
 import { api } from "@/lib/api";
@@ -68,12 +68,12 @@ const Home = () => {
   const scooters = useMemo(() => vehicles.filter((v) => v.category === "scooter" || v.category === "electric_scooter"), [vehicles]);
 
   const platformWorkflow = [
-    { title: "Register Company", copy: "Rental owners create a verified tenant account with business, GST, contact, and branding details.", icon: UserPlus },
-    { title: "Choose Plan", copy: "Starter, Professional, or Enterprise controls fleet, staff, branches, reports, and integrations.", icon: CreditCard },
-    { title: "Activate Dashboard", copy: "After payment, the tenant workspace opens with isolated data, roles, settings, and billing.", icon: ShieldCheck },
-    { title: "List Fleet", copy: "Owners add bikes and scooters, pricing, availability, documents, images, and branch assignment.", icon: Bike },
-    { title: "Accept Bookings", copy: "Customers browse that tenant's vehicles, upload documents, pay rent, and receive invoices.", icon: Store },
-    { title: "Scale Operations", copy: "Teams track revenue, bookings, maintenance, customers, payments, and branch performance.", icon: Gauge },
+    { title: "Register Company", copy: "Rental owners create a verified tenant account with business, GST, contact, and branding details.", icon: "building" },
+    { title: "Choose Plan", copy: "Starter, Professional, or Enterprise controls fleet, staff, branches, reports, and integrations.", icon: "card" },
+    { title: "Activate Dashboard", copy: "After payment, the tenant workspace opens with isolated data, roles, settings, and billing.", icon: "shield" },
+    { title: "List Fleet", copy: "Owners add bikes and scooters, pricing, availability, documents, images, and branch assignment.", icon: "bike" },
+    { title: "Accept Bookings", copy: "Customers browse that tenant's vehicles, upload documents, pay rent, and receive invoices.", icon: "check" },
+    { title: "Scale Operations", copy: "Teams track revenue, bookings, maintenance, customers, payments, and branch performance.", icon: "gauge" },
   ];
 
   return (
@@ -104,7 +104,7 @@ const Home = () => {
               <div className="mt-6 grid grid-cols-2 gap-3 text-sm">
                 {["Tenant data isolation", "Subscription billing", "Owner dashboard", "Customer checkout"].map((item) => (
                   <div key={item} className="flex items-center gap-2 rounded-xl border border-border bg-card p-3">
-                    <CheckCircle2 className="text-success" size={17} />
+                    <ProIcon name="check" className="text-success" size={17} />
                     <span className="font-medium text-foreground">{item}</span>
                   </div>
                 ))}
@@ -122,8 +122,8 @@ const Home = () => {
                   className="premium-card p-5"
                 >
                   <div className="flex items-start gap-3">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                      <step.icon size={21} />
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                      <ProIcon name={step.icon as ProIconName} size={21} />
                     </div>
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
@@ -162,7 +162,7 @@ const Home = () => {
           {loading ? (
             <p className="text-center text-muted-foreground">Loading vehicles...</p>
           ) : featured.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-border bg-card p-8 text-center text-muted-foreground">
+            <div className="rounded-lg border border-dashed border-border bg-card p-8 text-center text-muted-foreground">
               No vehicles match these filters. Try another location, company, or category.
             </div>
           ) : (
@@ -194,8 +194,8 @@ const Home = () => {
               viewport={{ once: true }}
               className="premium-card flex cursor-pointer items-center gap-6 p-8"
             >
-              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
-                <Bike className="text-primary" size={32} />
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-md bg-primary/10">
+                <ProIcon name="bike" className="text-primary" size={32} />
               </div>
               <div>
                 <h3 className="font-heading text-2xl font-bold text-foreground">Bikes</h3>
@@ -209,8 +209,8 @@ const Home = () => {
               viewport={{ once: true }}
               className="premium-card flex cursor-pointer items-center gap-6 p-8"
             >
-              <div className="w-16 h-16 rounded-2xl bg-accent/10 flex items-center justify-center shrink-0">
-                <Zap className="text-accent" size={32} />
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-md bg-accent/10">
+                <ProIcon name="bolt" className="text-accent" size={32} />
               </div>
               <div>
                 <h3 className="font-heading text-2xl font-bold text-foreground">Scooters</h3>
@@ -220,7 +220,7 @@ const Home = () => {
           </div>
 
           <section className="mb-12">
-            <div className="relative overflow-hidden rounded-3xl border border-border/60 bg-background/80 p-6 md:p-10">
+            <div className="relative overflow-hidden rounded-lg border border-border/60 bg-background/80 p-6 md:p-10">
               <img src={bikeSectionBg} alt="" className="absolute inset-0 h-full w-full object-cover opacity-25" />
               <div className="absolute inset-0 bg-gradient-to-br from-background/90 via-background/70 to-background/95" />
               <div className="relative z-10">
@@ -235,7 +235,7 @@ const Home = () => {
           </section>
 
           <section>
-            <div className="relative overflow-hidden rounded-3xl border border-border/60 bg-background/80 p-6 md:p-10">
+            <div className="relative overflow-hidden rounded-lg border border-border/60 bg-background/80 p-6 md:p-10">
               <img src={scooterSectionBg} alt="" className="absolute inset-0 h-full w-full object-cover opacity-25" />
               <div className="absolute inset-0 bg-gradient-to-br from-background/90 via-background/70 to-background/95" />
               <div className="relative z-10">

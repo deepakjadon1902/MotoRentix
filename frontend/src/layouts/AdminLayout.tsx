@@ -1,17 +1,17 @@
 import { NavLink, Outlet, Link } from "react-router-dom";
 import {
-  BarChart3,
   Bike,
   BookOpenCheck,
   CreditCard,
   LayoutDashboard,
   LogOut,
   MessageSquare,
-  Shield,
   Store,
   Users,
 } from "lucide-react";
 import { useAdminStore } from '@/store/adminStore';
+import BrandMark from "@/components/BrandMark";
+import { ProIcon } from "@/components/ProIcons";
 
 const links = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard, end: true },
@@ -33,20 +33,16 @@ const AdminLayout = () => {
         <header className="border-b border-white/10 bg-slate-950/80 backdrop-blur-xl">
           <div className="mx-auto flex max-w-[1480px] flex-col gap-4 px-4 py-4 md:flex-row md:items-center md:justify-between md:px-8">
             <Link to="/admin" className="flex items-center gap-3 text-white">
-              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/20">
-                <Shield size={21} />
-              </span>
-              <div>
-                <p className="font-heading text-xl font-bold leading-none">MotoRentix Control</p>
-                <p className="mt-1 text-xs font-medium uppercase tracking-[0.2em] text-white/50">Super admin</p>
-              </div>
+              <BrandMark inverted />
+              <span className="hidden h-8 border-l border-white/15 md:block" />
+              <span className="hidden font-heading text-sm font-semibold uppercase tracking-[0.18em] text-white/58 md:block">Control</span>
             </Link>
 
             <div className="flex flex-wrap items-center gap-3 text-sm text-white/70">
-              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-2">{user?.email}</span>
+              <span className="rounded-md border border-white/10 bg-white/5 px-3 py-2">{user?.email}</span>
               <button
                 onClick={logout}
-                className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 font-semibold text-slate-950 transition hover:bg-white/90"
+                className="flex items-center gap-2 rounded-md bg-white px-4 py-2 font-semibold text-slate-950 transition hover:bg-white/90"
               >
                 <LogOut size={16} />
                 Logout
@@ -56,9 +52,9 @@ const AdminLayout = () => {
         </header>
 
         <div className="mx-auto grid max-w-[1480px] grid-cols-1 gap-6 px-4 py-6 md:px-8 lg:grid-cols-[260px_1fr]">
-          <aside className="h-fit rounded-2xl border border-white/10 bg-white/95 p-3 shadow-xl shadow-slate-950/10 backdrop-blur-xl lg:sticky lg:top-6">
-            <div className="mb-3 hidden rounded-xl bg-slate-950 p-4 text-white lg:block">
-              <BarChart3 className="text-primary" size={22} />
+          <aside className="h-fit rounded-lg border border-white/10 bg-white/95 p-3 shadow-xl shadow-slate-950/10 backdrop-blur-xl lg:sticky lg:top-6">
+            <div className="mb-3 hidden rounded-md bg-slate-950 p-4 text-white lg:block">
+              <ProIcon name="gauge" className="text-primary" size={22} />
               <p className="mt-3 font-heading text-lg font-bold">Platform Command</p>
               <p className="mt-1 text-xs text-white/60">Clients, revenue, subscriptions, and fleet oversight.</p>
             </div>
@@ -70,7 +66,7 @@ const AdminLayout = () => {
                   to={link.to}
                   end={link.end}
                   className={({ isActive }) =>
-                    `flex min-w-max items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
+                    `flex min-w-max items-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${
                       isActive ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-secondary"
                     }`
                   }

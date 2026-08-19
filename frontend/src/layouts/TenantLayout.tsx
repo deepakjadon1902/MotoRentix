@@ -79,7 +79,7 @@ const TenantLayout = () => {
   return (
     <div className="min-h-screen bg-background px-4 py-6 md:px-8 lg:px-10">
       <div className="mx-auto max-w-[1480px]">
-        <div className="mb-6 flex flex-col gap-4 rounded-2xl border border-border bg-card p-5 shadow-sm md:flex-row md:items-center md:justify-between">
+        <div className="mb-6 flex flex-col gap-4 rounded-lg border border-border bg-card p-5 shadow-sm md:flex-row md:items-center md:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Client workspace</p>
             <h1 className="font-heading mt-2 text-2xl font-bold text-foreground md:text-3xl">
@@ -88,7 +88,7 @@ const TenantLayout = () => {
           </div>
           <div className="grid grid-cols-3 gap-2 text-center text-xs sm:flex sm:text-left">
             {["Fleet", "Bookings", "Payments"].map((item) => (
-              <span key={item} className="rounded-full border border-border bg-secondary px-3 py-2 font-medium text-muted-foreground">
+              <span key={item} className="rounded-md border border-border bg-secondary px-3 py-2 font-medium text-muted-foreground">
                 {item}
               </span>
             ))}
@@ -107,7 +107,7 @@ const TenantLayout = () => {
                   to={link.to}
                   end={link.end}
                   className={({ isActive }) =>
-                    `flex min-w-max items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+                    `flex min-w-max items-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium transition ${
                       isActive
                         ? "bg-primary text-primary-foreground shadow-sm"
                         : "text-foreground hover:bg-secondary"

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Check, CreditCard, Infinity, ShieldCheck, Sparkles, X } from "lucide-react";
+import { Check, CreditCard, Infinity as InfinityIcon, ShieldCheck, Sparkles, X } from "lucide-react";
 import { motion } from "framer-motion";
 import { api } from "@/lib/api";
 import type { SubscriptionPlan } from "@/lib/types";
@@ -14,7 +14,7 @@ const fallbackCycles = [
 ];
 
 const showLimit = (value?: number) =>
-  Number(value || 0) === 0 ? <Infinity size={18} /> : Number(value).toLocaleString("en-IN");
+  Number(value || 0) === 0 ? <InfinityIcon size={18} /> : Number(value).toLocaleString("en-IN");
 
 const billingCyclesForPlan = (plan?: SubscriptionPlan) => {
   const cycles = (plan?.billingCycles || []).filter((cycle) => cycle.active !== false);

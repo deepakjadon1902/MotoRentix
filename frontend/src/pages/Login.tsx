@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { Eye, EyeOff } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { toast } from 'sonner';
-import logo from '@/assets/logo.jpeg';
+import BrandMark from '@/components/BrandMark';
 import bikeHero from '@/assets/hero-bike-2.jpg';
 import GoogleButton from '@/components/auth/GoogleButton';
 import { API_BASE_URL } from '@/lib/apiBase';
@@ -45,7 +45,7 @@ const Login = () => {
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative z-10 w-full max-w-4xl glass rounded-3xl overflow-hidden border border-border/60 grid md:grid-cols-[1.1fr_0.9fr]"
+        className="glass relative z-10 grid w-full max-w-4xl overflow-hidden rounded-lg border border-border/60 md:grid-cols-[1.1fr_0.9fr]"
       >
         <div
           className="hidden md:flex flex-col justify-between p-10 bg-cover bg-center text-background"
@@ -54,8 +54,7 @@ const Login = () => {
           }}
         >
           <div className="flex items-center gap-3">
-            <img src={logo} alt="MotoRentix" className="h-12 w-12 rounded-full object-cover ring-2 ring-white/60" />
-            <span className="font-heading text-xl font-bold">MotoRentix</span>
+            <BrandMark inverted logoClassName="h-12 w-12" />
           </div>
           <div>
             <p className="text-sm uppercase tracking-[0.3em] opacity-80">Member Access</p>
@@ -68,11 +67,7 @@ const Login = () => {
 
         <div className="p-8 md:p-10 bg-background/80">
           <div className="text-center md:text-left mb-6">
-            <img
-              src={logo}
-              alt="MotoRentix"
-              className="h-12 w-12 rounded-full object-cover mx-auto md:mx-0 ring-2 ring-border/70"
-            />
+            <BrandMark compact className="justify-center md:justify-start" logoClassName="h-12 w-12 mx-auto md:mx-0" />
             <h2 className="font-heading text-2xl font-bold text-foreground mt-4">User Login</h2>
             <p className="text-sm text-muted-foreground mt-1">Access your MotoRentix account</p>
           </div>
@@ -85,7 +80,7 @@ const Login = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
-                className="w-full px-4 py-3 rounded-xl bg-secondary/60 text-foreground border border-border focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                  className="w-full rounded-md border border-border bg-secondary/60 px-4 py-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
 
@@ -102,7 +97,7 @@ const Login = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="********"
-                  className="w-full px-4 py-3 rounded-xl bg-secondary/60 text-foreground border border-border focus:outline-none focus:ring-2 focus:ring-primary text-sm pr-10"
+                  className="w-full rounded-md border border-border bg-secondary/60 px-4 py-3 pr-10 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                 />
                 <button
                   type="button"
@@ -114,7 +109,7 @@ const Login = () => {
               </div>
             </div>
 
-            <button type="submit" className="w-full btn-primary-gradient py-3 rounded-xl font-semibold text-primary-foreground">
+            <button type="submit" className="w-full btn-primary-gradient rounded-md py-3 font-semibold text-primary-foreground">
               Login
             </button>
           </form>
