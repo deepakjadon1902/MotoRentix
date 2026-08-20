@@ -68,12 +68,13 @@ export type AdminBooking = {
   _id?: string;
   id?: string;
   userId?: { name?: string; email?: string; phone?: string; address?: string; city?: string; pincode?: string; aadhaarNumber?: string };
-  vehicleId?: { name?: string; category?: string };
-  durationType?: "hour" | "day";
+  vehicleId?: { name?: string; category?: string; bikeNumber?: string };
+  durationType?: "hour" | "day" | "week";
   startDate?: string;
   endDate?: string;
   totalPrice?: number;
-  status?: "pending" | "confirmed" | "rejected" | "completed";
+  paymentStatus?: "pending" | "paid" | "failed" | "refunded";
+  status?: "pending" | "confirmed" | "rejected" | "completed" | "running" | "cancelled" | "refunded" | "overdue";
   createdAt?: string;
 };
 
@@ -165,11 +166,17 @@ export type AdminPayment = {
   id?: string;
   tenantId?: AdminTenant;
   paymentFor?: "owner_subscription" | "customer_rental";
+  bookingId?: AdminBooking;
+  subscriptionId?: AdminSubscription;
   provider?: string;
+  providerPaymentId?: string;
+  providerOrderId?: string;
   amount?: number;
   currency?: string;
   status?: "pending" | "paid" | "failed" | "refunded";
+  metadata?: Record<string, unknown>;
   createdAt?: string;
+  updatedAt?: string;
 };
 
 const parseJson = async (res: Response) => {
@@ -376,6 +383,12 @@ export const adminApi = {
   },
   async listPayments(token: string) {
     return request<AdminPayment[]>("/admin/payments", token);
+  },
+  async updatePaymentStatus(token: string, paymentId: string, status: "paid" | "failed" | "refunded") {
+    return request<AdminPayment>(`/admin/payments/${paymentId}/status`, token, {
+      method: "PUT",
+      body: JSON.stringify({ status }),
+    });
   },
   async listVehicles(token: string) {
     const data = await request<VehicleDto[]>("/admin/vehicles", token);

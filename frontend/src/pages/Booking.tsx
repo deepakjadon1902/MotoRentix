@@ -41,6 +41,7 @@ const Booking = () => {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [paymentProvider, setPaymentProvider] = useState("cash");
+  const [payerUpiId, setPayerUpiId] = useState("");
   const [checkout, setCheckout] = useState<CheckoutResponse | null>(null);
   const [checkoutBookingId, setCheckoutBookingId] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -136,7 +137,11 @@ const Booking = () => {
         endDate,
       });
       const bookingId = booking._id || booking.id || "";
-      const payment = await api.createCustomerRentalPayment(token, { bookingId, provider: paymentProvider });
+      const payment = await api.createCustomerRentalPayment(token, {
+        bookingId,
+        provider: paymentProvider,
+        payerUpiId: paymentProvider === "upi" ? payerUpiId.trim() || undefined : undefined,
+      });
       setCheckout(payment);
       setCheckoutBookingId(bookingId);
 
@@ -226,7 +231,7 @@ const Booking = () => {
   };
 
   const branch = vehicle.branchId && typeof vehicle.branchId === "object" ? vehicle.branchId : null;
-  const paymentMethods = ["razorpay", "cash"];
+  const paymentMethods = ["razorpay", "upi", "cash"];
 
   return (
     <div className="section-padding bg-background min-h-screen">
@@ -392,6 +397,19 @@ const Booking = () => {
                   ))}
                 </div>
               </div>
+
+              {paymentProvider === "upi" && (
+                <div className="rounded-2xl border border-border/60 bg-background/60 p-5">
+                  <label className="block text-sm font-semibold text-foreground">Your UPI ID</label>
+                  <input
+                    type="text"
+                    value={payerUpiId}
+                    onChange={(e) => setPayerUpiId(e.target.value)}
+                    placeholder="name@bank"
+                    className="mt-2 w-full rounded-xl border border-border bg-secondary px-4 py-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                </div>
+              )}
 
               {checkout?.checkout?.provider === "upi" && (
                 <div className="rounded-2xl border border-primary/20 bg-primary/5 p-5">

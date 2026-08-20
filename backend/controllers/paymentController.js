@@ -191,7 +191,7 @@ const applyRentalPaymentStatus = async ({ payment, status, providerPaymentId, me
 };
 
 export const createCustomerRentalPayment = asyncHandler(async (req, res) => {
-  const { bookingId, provider = "razorpay" } = req.body;
+  const { bookingId, provider = "razorpay", payerUpiId } = req.body;
   if (!bookingId) {
     return res.status(400).json({ message: "bookingId is required" });
   }
@@ -234,7 +234,7 @@ export const createCustomerRentalPayment = asyncHandler(async (req, res) => {
     amount: booking.totalPrice,
     currency: "INR",
     status: "pending",
-    metadata: { source: "customer_checkout" },
+    metadata: { source: "customer_checkout", ...(payerUpiId ? { payerUpiId } : {}) },
   });
 
   if (provider === "razorpay") {
@@ -376,7 +376,10 @@ export const createCustomerRentalPayment = asyncHandler(async (req, res) => {
   }
 
   if (provider === "upi") {
+    const note = `MotoRentix booking ${booking.id}`;
     if (!providerSettings.upiId) {
+      payment.metadata = { ...payment.metadata, note };
+      await payment.save();
       return res.status(201).json({
         payment,
         checkout: {
@@ -388,7 +391,6 @@ export const createCustomerRentalPayment = asyncHandler(async (req, res) => {
         },
       });
     }
-    const note = `MotoRentix booking ${booking.id}`;
     const upiIntentUrl = buildUpiIntentUrl({
       upiId: providerSettings.upiId,
       displayName: providerSettings.displayName || tenant?.companyName,
@@ -404,7 +406,7 @@ export const createCustomerRentalPayment = asyncHandler(async (req, res) => {
         light: "#ffffff",
       },
     });
-    payment.metadata = { ...payment.metadata, upiIntentUrl, upiId: providerSettings.upiId };
+    payment.metadata = { ...payment.metadata, upiIntentUrl, upiId: providerSettings.upiId, note };
     await payment.save();
     return res.status(201).json({
       payment,

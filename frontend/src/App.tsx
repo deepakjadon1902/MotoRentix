@@ -24,6 +24,7 @@ import AdminAnalytics from "@/pages/admin/AdminAnalytics";
 import AdminVehicles from "@/pages/admin/AdminVehicles";
 import AdminUsers from "@/pages/admin/AdminUsers";
 import AdminBookings from "@/pages/admin/AdminBookings";
+import AdminPayments from "@/pages/admin/AdminPayments";
 import AdminMessages from "@/pages/admin/AdminMessages";
 import AdminLayout from "@/layouts/AdminLayout";
 import AdminGuard from "@/components/admin/AdminGuard";
@@ -62,6 +63,7 @@ const App = () => (
               <Route path="vehicles" element={<AdminVehicles />} />
               <Route path="users" element={<AdminUsers />} />
               <Route path="bookings" element={<AdminBookings />} />
+              <Route path="payments" element={<AdminPayments />} />
               <Route path="messages" element={<AdminMessages />} />
             </Route>
           </Route>

@@ -946,7 +946,71 @@ export const listPayments = asyncHandler(async (req, res) => {
   const payments = await Payment.find()
     .populate("tenantId", "companyName email")
     .populate("subscriptionId", "billingCycle status")
-    .populate("bookingId", "totalPrice status")
+    .populate({
+      path: "bookingId",
+      select: "totalPrice status paymentStatus startDate endDate durationType userId vehicleId",
+      populate: [
+        { path: "userId", select: "name email phone address city pincode aadhaarNumber" },
+        { path: "vehicleId", select: "name category bikeNumber" },
+      ],
+    })
     .sort({ createdAt: -1 });
   res.json(payments);
+});
+
+export const updatePaymentStatus = asyncHandler(async (req, res) => {
+  const { status } = req.body;
+  if (!["paid", "failed", "refunded"].includes(status)) {
+    return res.status(400).json({ message: "Invalid payment status" });
+  }
+
+  const payment = await Payment.findById(req.params.id);
+  if (!payment) {
+    return res.status(404).json({ message: "Payment not found" });
+  }
+  if (payment.provider === "razorpay") {
+    return res.status(400).json({ message: "Razorpay payments are verified automatically by the server and webhook" });
+  }
+  if (!["upi", "cash", "bank_transfer", "manual"].includes(payment.provider)) {
+    return res.status(400).json({ message: "This payment method cannot be manually verified here" });
+  }
+
+  payment.status = status;
+  payment.metadata = {
+    ...(payment.metadata || {}),
+    manualVerification: {
+      status,
+      adminId: req.user.id,
+      verifiedAt: new Date().toISOString(),
+    },
+  };
+  await payment.save();
+
+  if (payment.bookingId) {
+    const booking = await Booking.findById(payment.bookingId);
+    if (booking) {
+      booking.paymentStatus = status;
+      if (status === "paid") {
+        booking.status = "confirmed";
+        await Vehicle.findByIdAndUpdate(booking.vehicleId, { availability: false, status: "booked" });
+      } else if (status === "failed") {
+        booking.status = booking.status === "confirmed" ? "pending" : booking.status;
+      }
+      await booking.save();
+    }
+  }
+
+  const populated = await Payment.findById(payment.id)
+    .populate("tenantId", "companyName email")
+    .populate("subscriptionId", "billingCycle status")
+    .populate({
+      path: "bookingId",
+      select: "totalPrice status paymentStatus startDate endDate durationType userId vehicleId",
+      populate: [
+        { path: "userId", select: "name email phone address city pincode aadhaarNumber" },
+        { path: "vehicleId", select: "name category bikeNumber" },
+      ],
+    });
+
+  res.json(populated);
 });

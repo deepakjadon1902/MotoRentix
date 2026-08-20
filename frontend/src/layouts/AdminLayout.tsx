@@ -3,6 +3,7 @@ import {
   Bike,
   BarChart3,
   BookOpenCheck,
+  CreditCard,
   LayoutDashboard,
   LogOut,
   MessageSquare,
@@ -18,6 +19,7 @@ const links = [
   { to: "/admin/vehicles", label: "Vehicles", icon: Bike },
   { to: "/admin/users", label: "Users", icon: Users },
   { to: "/admin/bookings", label: "Bookings", icon: BookOpenCheck },
+  { to: "/admin/payments", label: "Payments", icon: CreditCard },
   { to: "/admin/messages", label: "Messages", icon: MessageSquare },
 ];
 

@@ -16,6 +16,7 @@ import {
   sendAdminMessage,
   replyMessage,
   listPayments,
+  updatePaymentStatus,
 } from "../controllers/adminController.js";
 import { requireAuth, requireAdmin } from "../middleware/auth.js";
 import upload from "../middleware/upload.js";
@@ -47,5 +48,6 @@ router.post("/messages/send", requireAuth, requireAdmin, sendAdminMessage);
 router.post("/reply", requireAuth, requireAdmin, replyMessage);
 
 router.get("/payments", requireAuth, requireAdmin, listPayments);
+router.put("/payments/:id/status", requireAuth, requireAdmin, updatePaymentStatus);
 
 export default router;

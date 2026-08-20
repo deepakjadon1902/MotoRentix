@@ -197,7 +197,7 @@ export const api = {
   },
   async createCustomerRentalPayment(
     token: string,
-    payload: { bookingId: string; provider: string },
+    payload: { bookingId: string; provider: string; payerUpiId?: string },
   ): Promise<{
     payment: { _id?: string; id?: string; amount?: number; status?: string; provider?: string };
     checkout?: {
