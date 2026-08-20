@@ -10,6 +10,7 @@ import Tenant from "../models/Tenant.js";
 import TenantDomain from "../models/TenantDomain.js";
 import asyncHandler from "../middleware/asyncHandler.js";
 import { uploadImageFiles } from "../utils/imageKit.js";
+import { normalizeStoredAssetList, normalizeStoredAssetPath, normalizeVehicleImages } from "../utils/assetPaths.js";
 import crypto from "crypto";
 import {
   ensureFeatureEnabled,
@@ -89,7 +90,7 @@ export const tenantOverview = asyncHandler(async (req, res) => {
 
 export const listTenantVehicles = asyncHandler(async (req, res) => {
   const vehicles = await Vehicle.find(tenantFilter(req)).sort({ createdAt: -1 });
-  res.json(vehicles);
+  res.json(vehicles.map((vehicle) => normalizeVehicleImages(vehicle.toObject())));
 });
 
 export const createTenantVehicle = asyncHandler(async (req, res) => {
@@ -117,7 +118,7 @@ export const createTenantVehicle = asyncHandler(async (req, res) => {
 
   const files = req.files && typeof req.files === "object" ? req.files : {};
   const uploaded = await uploadImageFiles([...(files.images || []), ...(files.image || [])]);
-  const fallbackImage = typeof req.body.image === "string" ? req.body.image : "";
+  const fallbackImage = normalizeStoredAssetPath(req.body.image);
   const images = uploaded.length > 0 ? uploaded : fallbackImage ? [fallbackImage] : [];
 
   const vehicle = await Vehicle.create({
@@ -156,13 +157,20 @@ export const updateTenantVehicle = asyncHandler(async (req, res) => {
   if (updates.features !== undefined) {
     updates.features = parseJsonArray(updates.features);
   }
+  if (updates.images !== undefined) {
+    updates.images = normalizeStoredAssetList(updates.images);
+    updates.image = updates.images[0] || "";
+  } else if (updates.image !== undefined) {
+    updates.image = normalizeStoredAssetPath(updates.image);
+  }
   Object.assign(vehicle, updates);
   if (uploaded.length > 0) {
-    vehicle.images = uploaded;
-    vehicle.image = uploaded[0];
+    const existingImages = normalizeStoredAssetList(vehicle.images?.length ? vehicle.images : vehicle.image);
+    vehicle.images = [...existingImages, ...uploaded].slice(0, 10);
+    vehicle.image = vehicle.images[0] || uploaded[0];
   }
   await vehicle.save();
-  res.json(vehicle);
+  res.json(normalizeVehicleImages(vehicle.toObject()));
 });
 
 export const deleteTenantVehicle = asyncHandler(async (req, res) => {

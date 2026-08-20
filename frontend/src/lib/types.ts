@@ -38,6 +38,7 @@ export interface Vehicle {
   pricePerWeek?: number;
   pricePerMonth?: number;
   securityDeposit?: number;
+  rating?: number;
   availability: boolean;
   status?: "available" | "booked" | "maintenance" | "disabled" | "archived";
   availablePaymentMethods?: string[];

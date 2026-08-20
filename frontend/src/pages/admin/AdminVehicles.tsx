@@ -10,6 +10,7 @@ import {
   Plus,
   Search,
   ShieldCheck,
+  Star,
   Store,
   Trash2,
   UploadCloud,
@@ -20,6 +21,9 @@ import { adminApi, type AdminVehiclePayload } from "@/lib/adminApi";
 import { optimizeImageUrl } from "@/lib/assetUrl";
 import type { Vehicle, VehicleCategory } from "@/lib/types";
 import { useAdminStore } from "@/store/adminStore";
+import AdminPagination from "@/components/admin/AdminPagination";
+
+const PAGE_SIZE = 10;
 
 type PopulatedBranch = Exclude<Vehicle["branchId"], string | undefined>;
 
@@ -42,6 +46,7 @@ const emptyForm: VehicleForm = {
   pricePerWeek: 2500,
   pricePerMonth: 9000,
   securityDeposit: 1000,
+  rating: 4.8,
   availability: true,
   status: "available",
 };
@@ -100,6 +105,8 @@ const AdminVehicles = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [page, setPage] = useState(1);
+  const [selectedImageIndexes, setSelectedImageIndexes] = useState<number[]>([]);
 
   const loadData = useCallback(async () => {
     if (!token) return;
@@ -165,9 +172,24 @@ const AdminVehicles = () => {
     [vehicles],
   );
 
+  const pagedVehicles = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return filteredVehicles.slice(start, start + PAGE_SIZE);
+  }, [filteredVehicles, page]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [availability, category, query]);
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(filteredVehicles.length / PAGE_SIZE));
+    if (page > totalPages) setPage(totalPages);
+  }, [filteredVehicles.length, page]);
+
   const resetForm = () => {
     setForm(emptyForm);
     setSelectedFiles([]);
+    setSelectedImageIndexes([]);
     setEditingId("");
     setError("");
   };
@@ -179,6 +201,44 @@ const AdminVehicles = () => {
 
   const removeNewImage = (index: number) => {
     setSelectedFiles((current) => current.filter((_, itemIndex) => itemIndex !== index));
+  };
+
+  const removePersistedImage = (index: number) => {
+    setForm((current) => {
+      const images = current.images || [];
+      const removed = images[index];
+      const nextImages = images.filter((_, itemIndex) => itemIndex !== index);
+      return {
+        ...current,
+        images: nextImages,
+        image: current.image === removed ? nextImages[0] || "" : current.image,
+      };
+    });
+    setSelectedImageIndexes((current) =>
+      current.filter((item) => item !== index).map((item) => (item > index ? item - 1 : item)),
+    );
+  };
+
+  const togglePersistedImage = (index: number) => {
+    setSelectedImageIndexes((current) =>
+      current.includes(index) ? current.filter((item) => item !== index) : [...current, index],
+    );
+  };
+
+  const removeSelectedPersistedImages = () => {
+    if (selectedImageIndexes.length === 0) return;
+    const selected = new Set(selectedImageIndexes);
+    setForm((current) => {
+      const images = current.images || [];
+      const nextImages = images.filter((_, index) => !selected.has(index));
+      const activeImageIndex = images.indexOf(current.image || "");
+      return {
+        ...current,
+        images: nextImages,
+        image: activeImageIndex >= 0 && selected.has(activeImageIndex) ? nextImages[0] || "" : current.image,
+      };
+    });
+    setSelectedImageIndexes([]);
   };
 
   const updateFeature = (index: number, value: string) => {
@@ -208,6 +268,7 @@ const AdminVehicles = () => {
         ...form,
         imageFiles: selectedFiles,
         features: (form.features || []).map((item) => item.trim()).filter(Boolean),
+        rating: Math.min(5, Math.max(0, Number(form.rating || 4.8))),
         availability: form.status === "available" ? true : Boolean(form.availability),
       };
       if (editingId) {
@@ -229,6 +290,7 @@ const AdminVehicles = () => {
   const edit = (vehicle: Vehicle) => {
     setEditingId(vehicle.id);
     setSelectedFiles([]);
+    setSelectedImageIndexes([]);
     setForm({
       ...emptyForm,
       branchId: itemId(vehicle.branchId),
@@ -246,6 +308,7 @@ const AdminVehicles = () => {
       pricePerWeek: vehicle.pricePerWeek || 0,
       pricePerMonth: vehicle.pricePerMonth || 0,
       securityDeposit: vehicle.securityDeposit || 0,
+      rating: vehicle.rating ?? 4.8,
       availability: vehicle.availability,
       status: vehicle.status || (vehicle.availability ? "available" : "disabled"),
     });
@@ -341,22 +404,54 @@ const AdminVehicles = () => {
                 </label>
               </div>
               {(visibleGallery.length > 0 || selectedFiles.length > 0) && (
-                <div className="grid grid-cols-5 gap-2 p-3">
-                  {visibleGallery.slice(0, 10).map((url, index) => (
-                    <div key={`${url}-${index}`} className="group relative aspect-square overflow-hidden rounded-md border border-border bg-background">
-                      <img src={optimizeImageUrl(url, { width: 180, height: 180, quality: 72 })} alt={`Gallery ${index + 1}`} className="h-full w-full object-cover" />
-                      {index >= persistedGallery.length && (
-                        <button
-                          type="button"
-                          onClick={() => removeNewImage(index - persistedGallery.length)}
-                          className="absolute right-1 top-1 hidden rounded bg-background/90 p-1 text-destructive shadow-sm group-hover:block"
-                          aria-label="Remove image"
-                        >
-                          <X size={12} />
-                        </button>
-                      )}
-                    </div>
-                  ))}
+                <div className="space-y-3 p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-xs font-semibold text-muted-foreground">
+                      {persistedGallery.length} saved photos, {selectedFiles.length} new selected
+                    </p>
+                    {selectedImageIndexes.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={removeSelectedPersistedImages}
+                        className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-1.5 text-xs font-bold text-destructive"
+                      >
+                        Remove selected ({selectedImageIndexes.length})
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+                    {visibleGallery.slice(0, 10).map((url, index) => {
+                      const persisted = index < persistedGallery.length;
+                      const selected = selectedImageIndexes.includes(index);
+                      return (
+                        <div key={`${url}-${index}`} className={`group relative aspect-square overflow-hidden rounded-md border bg-background ${selected ? "border-destructive ring-2 ring-destructive/30" : "border-border"}`}>
+                          <img src={optimizeImageUrl(url, { width: 180, height: 180, quality: 72 })} alt={`Gallery ${index + 1}`} className="h-full w-full object-cover" />
+                          <div className="absolute inset-x-1 top-1 flex items-center justify-between gap-1">
+                            {persisted ? (
+                              <button
+                                type="button"
+                                onClick={() => togglePersistedImage(index)}
+                                className={`rounded bg-background/90 px-2 py-1 text-[10px] font-bold shadow-sm ${selected ? "text-destructive" : "text-foreground"}`}
+                              >
+                                {selected ? "Selected" : "Select"}
+                              </button>
+                            ) : (
+                              <span className="rounded bg-primary/90 px-2 py-1 text-[10px] font-bold text-primary-foreground shadow-sm">New</span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => persisted ? removePersistedImage(index) : removeNewImage(index - persistedGallery.length)}
+                              className="rounded bg-background/90 p-1 text-destructive shadow-sm"
+                              aria-label="Remove image"
+                            >
+                              <X size={12} />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </div>
@@ -402,6 +497,25 @@ const AdminVehicles = () => {
                   </label>
                 ))}
               </div>
+
+              <label className="space-y-1 text-xs text-muted-foreground">
+                Star rating
+                <div className="flex items-center gap-2 rounded-lg border border-border bg-secondary px-3 py-2.5 text-sm text-foreground">
+                  <Star size={15} className="text-warning" />
+                  <input
+                    className="w-full bg-transparent text-sm outline-none"
+                    type="number"
+                    min="0"
+                    max="5"
+                    step="0.1"
+                    value={Number(form.rating ?? 4.8)}
+                    onChange={(e) => {
+                      const value = Number(e.target.value);
+                      setForm((f) => ({ ...f, rating: Number.isNaN(value) ? 0 : Math.min(5, Math.max(0, value)) }));
+                    }}
+                  />
+                </div>
+              </label>
 
               <textarea className="rounded-lg border border-border bg-secondary px-4 py-3 text-sm" rows={4} placeholder="Customer-facing description, condition, pickup notes, helmet info..." value={form.description || ""} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} />
             </div>
@@ -460,7 +574,7 @@ const AdminVehicles = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-              {filteredVehicles.map((vehicle) => {
+              {pagedVehicles.map((vehicle) => {
                 const branch = getBranch(vehicle);
                 const gallery = vehicle.images?.length ? vehicle.images : vehicle.image ? [vehicle.image] : [];
                 const image = optimizeImageUrl(gallery[0], { width: 720, height: 480, quality: 78 });
@@ -482,8 +596,14 @@ const AdminVehicles = () => {
                           {currentStatus}
                         </span>
                       </div>
-                      <div className="absolute bottom-3 right-3 rounded-md bg-background/90 px-3 py-1 text-xs font-semibold text-foreground">
-                        {gallery.length} photos
+                      <div className="absolute bottom-3 right-3 flex items-center gap-2">
+                        <span className="inline-flex items-center gap-1 rounded-md bg-background/90 px-3 py-1 text-xs font-semibold text-foreground">
+                          <Star size={13} className="text-warning" />
+                          {Number(vehicle.rating ?? 4.8).toFixed(1)}
+                        </span>
+                        <span className="rounded-md bg-background/90 px-3 py-1 text-xs font-semibold text-foreground">
+                          {gallery.length} photos
+                        </span>
                       </div>
                     </div>
 
@@ -538,6 +658,7 @@ const AdminVehicles = () => {
               })}
             </div>
           )}
+          <AdminPagination page={page} total={filteredVehicles.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
         </section>
       </div>
     </div>

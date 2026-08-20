@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { adminApi, type AdminMessage, type AdminUser } from "@/lib/adminApi";
 import { useAdminStore } from "@/store/adminStore";
+import AdminPagination from "@/components/admin/AdminPagination";
 
 type Audience = "selected" | "users" | "collective";
+const PAGE_SIZE = 10;
 
 const userIdOf = (user: AdminUser) => user._id || user.id || "";
 
@@ -19,6 +21,7 @@ const AdminMessages = () => {
   const [notice, setNotice] = useState("");
   const [replyMap, setReplyMap] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
+  const [page, setPage] = useState(1);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -115,6 +118,20 @@ const AdminMessages = () => {
       return id === selectedUserId;
     });
   }, [messages, selectedUserId]);
+
+  const pagedMessages = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return filteredMessages.slice(start, start + PAGE_SIZE);
+  }, [filteredMessages, page]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [selectedUserId]);
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(filteredMessages.length / PAGE_SIZE));
+    if (page > totalPages) setPage(totalPages);
+  }, [filteredMessages.length, page]);
 
   return (
     <div className="space-y-6">
@@ -262,7 +279,7 @@ const AdminMessages = () => {
         </aside>
 
         <div className="space-y-4">
-          {filteredMessages.map((m) => (
+          {pagedMessages.map((m) => (
             <div key={m._id || m.id} className="space-y-3 rounded-2xl border border-border bg-background p-5">
               <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                 <div className="text-sm text-muted-foreground">
@@ -300,6 +317,9 @@ const AdminMessages = () => {
             </div>
           ))}
           {filteredMessages.length === 0 && <p className="text-muted-foreground">No messages yet.</p>}
+          {filteredMessages.length > 0 && (
+            <AdminPagination page={page} total={filteredMessages.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
+          )}
         </div>
       </div>
     </div>

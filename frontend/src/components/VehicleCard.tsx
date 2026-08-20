@@ -50,6 +50,7 @@ const VehicleCard = ({ vehicle, index = 0 }: VehicleCardProps) => {
       : vehicle.category?.replace("_", " ");
   const location = branch?.city || branch?.address || "Pickup after booking";
   const weeklyPrice = vehicle.pricePerWeek || vehicle.pricePerDay * 7;
+  const rating = Number(vehicle.rating ?? 4.8).toFixed(1);
   const priceItems = [
     { label: "Hour", value: vehicle.pricePerHour },
     { label: "Day", value: vehicle.pricePerDay },
@@ -94,7 +95,7 @@ const VehicleCard = ({ vehicle, index = 0 }: VehicleCardProps) => {
           )}
           <div className="absolute left-3 top-3 flex items-center gap-1.5 rounded-md border border-white/50 bg-background/90 px-2.5 py-1 text-[11px] font-bold text-foreground shadow-sm backdrop-blur">
             <ProIcon name="star" className="text-warning" size={13} />
-            4.8
+            {rating}
           </div>
           <div className="absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-md bg-slate-950/78 px-2.5 py-1 text-[11px] font-bold text-white shadow-sm backdrop-blur">
             <Camera size={12} />

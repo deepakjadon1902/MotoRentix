@@ -21,6 +21,7 @@ type VehicleDto = {
   pricePerWeek?: number;
   pricePerMonth?: number;
   securityDeposit?: number;
+  rating?: number;
   availability?: boolean;
   status?: "available" | "booked" | "maintenance" | "disabled" | "archived";
   createdAt?: string;
@@ -45,6 +46,7 @@ export type AdminVehiclePayload = {
   pricePerWeek?: number;
   pricePerMonth?: number;
   securityDeposit?: number;
+  rating?: number;
   availability: boolean;
   status?: NonNullable<Vehicle["status"]>;
 };
@@ -213,6 +215,7 @@ const vehicleFormData = (payload: Partial<AdminVehiclePayload>) => {
   const form = new FormData();
   Object.entries(payload).forEach(([key, value]) => {
     if (value === undefined || value === null || key === "imageFiles") return;
+    if ((key === "branchId" || key === "tenantId") && String(value).trim() === "") return;
     if (Array.isArray(value)) {
       if (key === "features" || key === "images") {
         form.append(key, JSON.stringify(value));
@@ -253,6 +256,7 @@ const mapVehicle = (v: VehicleDto): Vehicle => {
   pricePerWeek: v.pricePerWeek ?? 0,
   pricePerMonth: v.pricePerMonth ?? 0,
   securityDeposit: v.securityDeposit ?? 0,
+  rating: v.rating ?? 4.8,
   availability: Boolean(v.availability),
   status: v.status,
   createdAt: v.createdAt,

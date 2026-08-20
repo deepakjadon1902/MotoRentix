@@ -12,6 +12,7 @@ import asyncHandler from "../middleware/asyncHandler.js";
 import { generateToken } from "../utils/jwt.js";
 import { verifyGoogleIdToken } from "../utils/googleAuth.js";
 import { uploadImageFiles } from "../utils/imageKit.js";
+import { normalizeStoredAssetList, normalizeStoredAssetPath, normalizeVehicleImages } from "../utils/assetPaths.js";
 import { sendMail } from "../utils/mail.js";
 import crypto from "crypto";
 import {
@@ -117,6 +118,7 @@ export const addVehicle = asyncHandler(async (req, res) => {
     pricePerWeek,
     pricePerMonth,
     securityDeposit,
+    rating,
     availability = true,
     status,
   } = req.body;
@@ -148,7 +150,7 @@ export const addVehicle = asyncHandler(async (req, res) => {
     .filter(Boolean);
   const uploaded = await uploadImageFiles(imageFiles);
 
-  const fallbackImage = typeof req.body.image === "string" ? req.body.image : "";
+  const fallbackImage = normalizeStoredAssetPath(req.body.image);
   const images = uploaded.length > 0 ? uploaded : fallbackImage ? [fallbackImage] : [];
   const image = uploaded[0] || fallbackImage;
 
@@ -169,6 +171,7 @@ export const addVehicle = asyncHandler(async (req, res) => {
     pricePerWeek: Number(pricePerWeek || 0),
     pricePerMonth: Number(pricePerMonth || 0),
     securityDeposit: Number(securityDeposit || 0),
+    rating: Math.min(5, Math.max(0, Number(rating || 4.8))),
     availability: availability === true || availability === "true",
     status: status || (availability === false || availability === "false" ? "disabled" : "available"),
   });
@@ -206,6 +209,7 @@ export const updateVehicle = asyncHandler(async (req, res) => {
     "pricePerWeek",
     "pricePerMonth",
     "securityDeposit",
+    "rating",
     "availability",
     "status",
     "image",
@@ -216,6 +220,11 @@ export const updateVehicle = asyncHandler(async (req, res) => {
       .filter((key) => req.body[key] !== undefined)
       .map((key) => [key, req.body[key]])
   );
+  ["tenantId", "branchId"].forEach((key) => {
+    if (updates[key] === "") {
+      delete updates[key];
+    }
+  });
   if (updates.tenantId) {
     const tenant = await Tenant.findById(updates.tenantId);
     if (!tenant) {
@@ -232,22 +241,31 @@ export const updateVehicle = asyncHandler(async (req, res) => {
   if (updates.features !== undefined) {
     updates.features = parseJsonArray(updates.features);
   }
-  ["pricePerHour", "pricePerDay", "pricePerWeek", "pricePerMonth", "securityDeposit"].forEach((key) => {
+  ["pricePerHour", "pricePerDay", "pricePerWeek", "pricePerMonth", "securityDeposit", "rating"].forEach((key) => {
     if (updates[key] !== undefined) updates[key] = Number(updates[key] || 0);
   });
+  if (updates.rating !== undefined) {
+    updates.rating = Math.min(5, Math.max(0, updates.rating));
+  }
   if (updates.availability !== undefined) {
     updates.availability = updates.availability === true || updates.availability === "true";
   }
   if (uploaded.length > 0) {
     delete updates.image;
-    delete updates.images;
+  }
+  const requestedImages = updates.images !== undefined ? normalizeStoredAssetList(updates.images) : null;
+  if (requestedImages) {
+    updates.images = requestedImages;
+    updates.image = requestedImages[0] || "";
+  } else if (updates.image !== undefined) {
+    updates.image = normalizeStoredAssetPath(updates.image);
   }
   Object.assign(vehicle, updates);
 
   if (uploaded.length > 0) {
-    const existingImages = Array.isArray(vehicle.images) ? vehicle.images : vehicle.image ? [vehicle.image] : [];
+    const existingImages = requestedImages || normalizeStoredAssetList(vehicle.images?.length ? vehicle.images : vehicle.image);
     vehicle.images = [...existingImages, ...uploaded].slice(0, 10);
-    vehicle.image = uploaded[0];
+    vehicle.image = requestedImages?.[0] || uploaded[0];
   } else {
     // Backward compatibility: if old doc only has `image`, expose at least one image.
     if (Array.isArray(vehicle.images) && vehicle.images.length === 0 && vehicle.image) {
@@ -293,11 +311,7 @@ export const listVehiclesForAdmin = asyncHandler(async (req, res) => {
 
   res.json(
     vehicles.map((vehicle) => {
-      const obj = vehicle.toObject();
-      if ((!Array.isArray(obj.images) || obj.images.length === 0) && obj.image) {
-        obj.images = [obj.image];
-      }
-      return obj;
+      return normalizeVehicleImages(vehicle.toObject());
     })
   );
 });

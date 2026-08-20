@@ -124,13 +124,13 @@ const HeroSlider = ({ filters, resultCount, onFiltersChange, onSearch }: HeroSli
 
           <div className="grid grid-cols-1 gap-3 rounded-lg border border-border bg-background p-3 md:grid-cols-[1.15fr_0.85fr_auto] md:items-end">
             <label className="block">
-              <span className="mb-2 block text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">Location</span>
+              <span className="mb-2 block text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">Search</span>
               <div className="flex items-center gap-2 rounded-md bg-secondary px-4 py-3">
                 <MapPin className="text-primary" size={18} />
                 <input
                   value={filters.location}
                   onChange={(event) => onFiltersChange({ ...filters, location: event.target.value })}
-                  placeholder="City, branch, area"
+                  placeholder="Apache, Activa, 500/day, Mathura"
                   className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-foreground outline-none placeholder:text-muted-foreground"
                 />
               </div>

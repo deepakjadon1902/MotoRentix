@@ -23,6 +23,7 @@ const vehicleSchema = new mongoose.Schema(
     pricePerWeek: { type: Number, default: 0 },
     pricePerMonth: { type: Number, default: 0 },
     securityDeposit: { type: Number, default: 0 },
+    rating: { type: Number, default: 4.8, min: 0, max: 5 },
     availability: { type: Boolean, default: true },
     status: { type: String, enum: ["available", "booked", "maintenance", "disabled", "archived"], default: "available" },
     gps: {

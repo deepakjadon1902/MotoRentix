@@ -1,11 +1,15 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { adminApi, type AdminUser } from "@/lib/adminApi";
 import { useAdminStore } from "@/store/adminStore";
+import AdminPagination from "@/components/admin/AdminPagination";
+
+const PAGE_SIZE = 10;
 
 const AdminUsersDetail = () => {
   const token = useAdminStore((s) => s.token);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [error, setError] = useState("");
+  const [page, setPage] = useState(1);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -21,6 +25,16 @@ const AdminUsersDetail = () => {
   useEffect(() => {
     load();
   }, [load]);
+
+  const pagedUsers = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return users.slice(start, start + PAGE_SIZE);
+  }, [page, users]);
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(users.length / PAGE_SIZE));
+    if (page > totalPages) setPage(totalPages);
+  }, [page, users.length]);
 
   return (
     <div className="space-y-6">
@@ -47,7 +61,7 @@ const AdminUsersDetail = () => {
               </tr>
             </thead>
             <tbody>
-              {users.map((u) => (
+              {pagedUsers.map((u) => (
                 <tr key={u._id || u.id} className="border-b border-border/50 hover:bg-secondary/30">
                   <td className="px-6 py-4 font-medium text-foreground">{u.name}</td>
                   <td className="px-6 py-4 text-muted-foreground">{u.email}</td>
@@ -69,6 +83,7 @@ const AdminUsersDetail = () => {
           </table>
         </div>
       </div>
+      <AdminPagination page={page} total={users.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
     </div>
   );
 };

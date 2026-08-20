@@ -4,6 +4,7 @@ import { Bike, MapPin, Search, ShieldCheck, SlidersHorizontal, Zap } from "lucid
 import VehicleCard from "@/components/VehicleCard";
 import PublicWorkflowBar from "@/components/PublicWorkflowBar";
 import { api } from "@/lib/api";
+import { vehicleMatchesSearch } from "@/lib/vehicleSearch";
 import type { Vehicle, VehicleCategory } from "@/lib/types";
 import bikeSectionBg from "@/assets/hero-bike-1.jpg";
 
@@ -38,16 +39,7 @@ const Dashboard = () => {
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return vehicles.filter((vehicle) => {
-      const branch = vehicle.branchId && typeof vehicle.branchId === "object" ? vehicle.branchId : null;
-      const haystack = [
-        vehicle.name,
-        vehicle.category,
-        vehicle.bikeNumber,
-        branch?.city,
-        branch?.address,
-        branch?.name,
-      ].filter(Boolean).join(" ").toLowerCase();
-      const matchesQuery = !needle || haystack.includes(needle);
+      const matchesQuery = !needle || vehicleMatchesSearch(vehicle, needle);
       const matchesCategory = categoryMatches(category, vehicle.category);
       return matchesQuery && matchesCategory;
     });
@@ -69,7 +61,7 @@ const Dashboard = () => {
           <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} className="max-w-3xl">
             <p className="text-sm font-bold uppercase tracking-[0.22em] text-primary">Browse MotoRentix rides</p>
             <h1 className="font-heading mt-3 text-4xl font-bold text-foreground md:text-5xl">Find your best ride from our managed fleet.</h1>
-            <p className="mt-3 text-muted-foreground">Search bikes, scooters, and electric rides by vehicle, location, or category.</p>
+            <p className="mt-3 text-muted-foreground">Search bikes, scooters, and electric rides by name, price, registration, location, or category.</p>
           </motion.div>
 
           <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }} className="marketplace-search mt-8 p-4">
@@ -80,7 +72,7 @@ const Dashboard = () => {
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                   className="h-14 w-full rounded-xl border border-border bg-secondary pl-11 pr-4 text-sm font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                  placeholder="Search location, bike, scooter..."
+                  placeholder="Search Apache, Activa, 500/day, under 1000..."
                 />
               </div>
               <select
@@ -139,7 +131,7 @@ const Dashboard = () => {
           ) : filtered.length === 0 ? (
             <div className="marketplace-search p-10 text-center">
               <h3 className="font-heading text-xl font-bold text-foreground">No matching rides found</h3>
-              <p className="mt-2 text-sm text-muted-foreground">Try another location, vehicle name, registration, or category.</p>
+              <p className="mt-2 text-sm text-muted-foreground">Try another vehicle name, price, registration, location, or category.</p>
             </div>
           ) : (
             <div className="vehicle-card-grid">

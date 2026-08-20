@@ -4,6 +4,7 @@ import { ProIcon, type ProIconName } from "@/components/ProIcons";
 import HeroSlider, { type MarketplaceFilters } from "@/components/HeroSlider";
 import VehicleCard from "@/components/VehicleCard";
 import { api } from "@/lib/api";
+import { vehicleMatchesSearch } from "@/lib/vehicleSearch";
 import type { Vehicle, VehicleCategory } from "@/lib/types";
 import bikeSectionBg from "@/assets/hero-bike-1.jpg";
 import scooterSectionBg from "@/assets/hero-scooter-1.jpg";
@@ -12,6 +13,9 @@ const categoryMatches = (filter: MarketplaceFilters["category"], category?: Vehi
   filter === "all" ||
   category === filter ||
   (filter === "electric" && (category === "electric_bike" || category === "electric_scooter"));
+
+const newestFirst = (items: Vehicle[]) =>
+  [...items].sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
 
 const Home = () => {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -40,27 +44,24 @@ const Home = () => {
   }, []);
 
   const filteredVehicles = useMemo(() => {
-    const locationNeedle = filters.location.trim().toLowerCase();
     const today = new Date().toISOString().slice(0, 10);
     const pickupDateValid = !filters.pickupDate || filters.pickupDate >= today;
     return vehicles.filter((vehicle) => {
-      const branch = vehicle.branchId && typeof vehicle.branchId === "object" ? vehicle.branchId : null;
       const categoryMatch = categoryMatches(filters.category, vehicle.category);
-      const locationMatch =
-        !locationNeedle ||
-        [branch?.city, branch?.address, branch?.name, vehicle.name, vehicle.bikeNumber, vehicle.category]
-          .filter(Boolean)
-          .some((item) => item?.toLowerCase().includes(locationNeedle));
+      const searchMatch = vehicleMatchesSearch(vehicle, filters.location);
       const verifiedMatch = !filters.verifiedOnly || vehicle.status !== "disabled";
-      return vehicle.availability && pickupDateValid && categoryMatch && locationMatch && verifiedMatch;
+      return vehicle.availability && pickupDateValid && categoryMatch && searchMatch && verifiedMatch;
     });
   }, [filters, vehicles]);
 
   const hasActiveFilters = filters.category !== "all" || Boolean(filters.location.trim()) || Boolean(filters.pickupDate) || filters.verifiedOnly;
-  const featured = useMemo(() => (hasActiveFilters ? filteredVehicles : vehicles.filter((v) => v.availability)).slice(0, 8), [filteredVehicles, hasActiveFilters, vehicles]);
-  const bikes = useMemo(() => vehicles.filter((v) => v.category === "bike"), [vehicles]);
-  const scooters = useMemo(() => vehicles.filter((v) => v.category === "scooter"), [vehicles]);
-  const electric = useMemo(() => vehicles.filter((v) => v.category === "electric_bike" || v.category === "electric_scooter"), [vehicles]);
+  const featured = useMemo(
+    () => (hasActiveFilters ? newestFirst(filteredVehicles) : newestFirst(vehicles.filter((v) => v.availability)).slice(0, 5)),
+    [filteredVehicles, hasActiveFilters, vehicles],
+  );
+  const bikes = useMemo(() => newestFirst(vehicles.filter((v) => v.category === "bike")), [vehicles]);
+  const scooters = useMemo(() => newestFirst(vehicles.filter((v) => v.category === "scooter")), [vehicles]);
+  const electric = useMemo(() => newestFirst(vehicles.filter((v) => v.category === "electric_bike" || v.category === "electric_scooter")), [vehicles]);
 
   const platformWorkflow = [
     { title: "Browse Fleet", copy: "Customers compare MotoRentix bikes, scooters, and electric rides with transparent pricing.", icon: "search" },
@@ -157,14 +158,10 @@ const Home = () => {
             <p className="text-center text-muted-foreground">Loading vehicles...</p>
           ) : featured.length === 0 ? (
             <div className="rounded-lg border border-dashed border-border bg-card p-8 text-center text-muted-foreground">
-              No vehicles match these filters. Try another location, vehicle, or category.
+              No vehicles match these filters. Try another name, price, location, or category.
             </div>
           ) : (
-            <div className="vehicle-card-grid">
-              {featured.map((v, i) => (
-                <VehicleCard key={v.id} vehicle={v} index={i} />
-              ))}
-            </div>
+            <VehicleAutoScroller vehicles={featured} />
           )}
         </div>
       </section>
@@ -252,11 +249,7 @@ const RideSection = ({
     </div>
 
     {vehicles.length > 0 ? (
-      <div className="vehicle-card-grid p-4 md:p-6">
-        {vehicles.map((v, i) => (
-          <VehicleCard key={v.id} vehicle={v} index={i} />
-        ))}
-      </div>
+      <VehicleAutoScroller vehicles={vehicles} className="p-4 md:p-6" />
     ) : (
       <div className="flex min-h-[92px] items-center justify-between gap-4 px-5 py-5 text-sm text-muted-foreground md:px-7">
         <span>No listings in this category yet.</span>
@@ -267,5 +260,58 @@ const RideSection = ({
     )}
   </section>
 );
+
+const VehicleAutoScroller = ({ vehicles, className = "" }: { vehicles: Vehicle[]; className?: string }) => {
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
+  const pauseRef = useRef(false);
+
+  useEffect(() => {
+    const scroller = scrollerRef.current;
+    if (!scroller || vehicles.length <= 1) return;
+
+    const timer = window.setInterval(() => {
+      if (pauseRef.current) return;
+      const maxScroll = scroller.scrollWidth - scroller.clientWidth;
+      if (maxScroll <= 0) return;
+
+      const next = scroller.scrollLeft + Math.min(320, Math.max(220, scroller.clientWidth * 0.72));
+      scroller.scrollTo({
+        left: next >= maxScroll - 8 ? 0 : next,
+        behavior: "smooth",
+      });
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, [vehicles.length]);
+
+  return (
+    <div className={className}>
+      <div
+        ref={scrollerRef}
+        onPointerEnter={() => {
+          pauseRef.current = true;
+        }}
+        onPointerLeave={() => {
+          pauseRef.current = false;
+        }}
+        onTouchStart={() => {
+          pauseRef.current = true;
+        }}
+        onTouchEnd={() => {
+          window.setTimeout(() => {
+            pauseRef.current = false;
+          }, 1200);
+        }}
+        className="scroll-fade-x flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4 [scrollbar-width:thin] md:gap-5"
+      >
+        {vehicles.map((v, i) => (
+          <div key={v.id} className="w-[82vw] max-w-[320px] shrink-0 snap-start sm:w-[300px] lg:w-[285px] xl:w-[300px]">
+            <VehicleCard vehicle={v} index={i} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
 
 export default Home;

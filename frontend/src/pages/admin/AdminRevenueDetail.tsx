@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { adminApi, type AdminBooking } from "@/lib/adminApi";
 import { useAdminStore } from "@/store/adminStore";
+import AdminPagination from "@/components/admin/AdminPagination";
+
+const PAGE_SIZE = 10;
 
 const AdminRevenueDetail = () => {
   const token = useAdminStore((s) => s.token);
   const [bookings, setBookings] = useState<AdminBooking[]>([]);
   const [error, setError] = useState("");
+  const [page, setPage] = useState(1);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -33,6 +37,16 @@ const AdminRevenueDetail = () => {
     const revenue = monthBookings.reduce((sum, b) => sum + (b.totalPrice || 0), 0);
     return { monthlyBookings: monthBookings, totalRevenue: revenue };
   }, [bookings]);
+
+  const pagedMonthlyBookings = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return monthlyBookings.slice(start, start + PAGE_SIZE);
+  }, [monthlyBookings, page]);
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(monthlyBookings.length / PAGE_SIZE));
+    if (page > totalPages) setPage(totalPages);
+  }, [monthlyBookings.length, page]);
 
   return (
     <div className="space-y-6">
@@ -65,7 +79,7 @@ const AdminRevenueDetail = () => {
               </tr>
             </thead>
             <tbody>
-              {monthlyBookings.map((b) => (
+              {pagedMonthlyBookings.map((b) => (
                 <tr key={b._id || b.id} className="border-b border-border/50 hover:bg-secondary/30">
                   <td className="px-6 py-4 text-muted-foreground">{b.userId?.name || "User"}</td>
                   <td className="px-6 py-4 text-muted-foreground">{b.vehicleId?.name || "Vehicle"}</td>
@@ -86,6 +100,7 @@ const AdminRevenueDetail = () => {
           </table>
         </div>
       </div>
+      <AdminPagination page={page} total={monthlyBookings.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
     </div>
   );
 };

@@ -12,7 +12,30 @@ export const resolveApiAssetUrl = (value: string | undefined) => {
   if (!value) return value;
   const trimmed = value.trim();
   if (!trimmed) return trimmed;
-  if (isAbsoluteUrl(trimmed) || trimmed.startsWith("data:") || trimmed.startsWith("blob:")) return trimmed;
+  const parsedFromJson = (() => {
+    if (!trimmed.startsWith("[") || !trimmed.endsWith("]")) return "";
+    try {
+      const parsed = JSON.parse(trimmed);
+      return Array.isArray(parsed) ? String(parsed.find(Boolean) || "") : "";
+    } catch {
+      return "";
+    }
+  })();
+  if (parsedFromJson) return resolveApiAssetUrl(parsedFromJson);
+  if (trimmed.startsWith("data:") || trimmed.startsWith("blob:")) return trimmed;
+
+  if (isAbsoluteUrl(trimmed)) {
+    try {
+      const url = new URL(trimmed);
+      const uploadIndex = url.pathname.indexOf("/uploads/");
+      if (uploadIndex >= 0) {
+        return resolveApiAssetUrl(url.pathname.slice(uploadIndex));
+      }
+    } catch {
+      return trimmed;
+    }
+    return trimmed;
+  }
 
   const path = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
 

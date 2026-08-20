@@ -1,12 +1,16 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { adminApi } from "@/lib/adminApi";
 import type { Vehicle } from "@/lib/types";
 import { useAdminStore } from "@/store/adminStore";
+import AdminPagination from "@/components/admin/AdminPagination";
+
+const PAGE_SIZE = 10;
 
 const AdminVehiclesDetail = () => {
   const token = useAdminStore((state) => state.token);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [error, setError] = useState("");
+  const [page, setPage] = useState(1);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -22,6 +26,16 @@ const AdminVehiclesDetail = () => {
   useEffect(() => {
     load();
   }, [load]);
+
+  const pagedVehicles = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return vehicles.slice(start, start + PAGE_SIZE);
+  }, [page, vehicles]);
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(vehicles.length / PAGE_SIZE));
+    if (page > totalPages) setPage(totalPages);
+  }, [page, vehicles.length]);
 
   return (
     <div className="space-y-6">
@@ -49,7 +63,7 @@ const AdminVehiclesDetail = () => {
               </tr>
             </thead>
             <tbody>
-              {vehicles.map((v) => (
+              {pagedVehicles.map((v) => (
                 <tr key={v.id} className="border-b border-border/50 hover:bg-secondary/30">
                   <td className="px-6 py-4 font-medium text-foreground">{v.name}</td>
                   <td className="px-6 py-4 text-muted-foreground">{v.category}</td>
@@ -68,6 +82,7 @@ const AdminVehiclesDetail = () => {
           </table>
         </div>
       </div>
+      <AdminPagination page={page} total={vehicles.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
     </div>
   );
 };

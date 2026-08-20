@@ -1,7 +1,21 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, CreditCard, IndianRupee, RefreshCcw, ShieldCheck, Smartphone, XCircle } from "lucide-react";
+import {
+  AlertCircle,
+  BadgeCheck,
+  CheckCircle2,
+  CreditCard,
+  IndianRupee,
+  Landmark,
+  RefreshCcw,
+  ShieldCheck,
+  Smartphone,
+  XCircle,
+} from "lucide-react";
 import { adminApi, type AdminPayment } from "@/lib/adminApi";
 import { useAdminStore } from "@/store/adminStore";
+import AdminPagination from "@/components/admin/AdminPagination";
+
+const PAGE_SIZE = 10;
 
 const idOf = (item?: { _id?: string; id?: string } | string) =>
   typeof item === "string" ? item : item?._id || item?.id || "";
@@ -9,19 +23,27 @@ const idOf = (item?: { _id?: string; id?: string } | string) =>
 const formatMoney = (value?: number, currency = "INR") =>
   `${currency} ${Number(value || 0).toLocaleString("en-IN")}`;
 
-const statusClass = (status?: string) => {
-  if (status === "paid") return "bg-emerald-500/10 text-emerald-600";
-  if (status === "failed") return "bg-rose-500/10 text-rose-600";
-  if (status === "refunded") return "bg-slate-500/10 text-slate-600";
-  return "bg-amber-500/10 text-amber-600";
+const formatDate = (value?: string) =>
+  value ? new Date(value).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "-";
+
+const shortId = (value?: string) => {
+  if (!value) return "-";
+  return value.length > 12 ? `${value.slice(0, 6)}...${value.slice(-5)}` : value;
 };
 
-const methodLabel = (provider?: string) => {
-  if (provider === "razorpay") return "Razorpay online";
-  if (provider === "upi") return "UPI / QR";
-  if (provider === "cash") return "Cash";
-  if (provider === "bank_transfer") return "Bank transfer";
-  return provider || "manual";
+const statusStyle = (status?: string) => {
+  if (status === "paid") return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  if (status === "failed") return "border-rose-200 bg-rose-50 text-rose-700";
+  if (status === "refunded") return "border-slate-200 bg-slate-100 text-slate-700";
+  return "border-amber-200 bg-amber-50 text-amber-700";
+};
+
+const methodConfig = (provider?: string) => {
+  if (provider === "razorpay") return { label: "Razorpay", icon: CreditCard, tone: "text-blue-700 bg-blue-50 border-blue-100" };
+  if (provider === "upi") return { label: "UPI / QR", icon: Smartphone, tone: "text-violet-700 bg-violet-50 border-violet-100" };
+  if (provider === "cash") return { label: "Cash", icon: Landmark, tone: "text-slate-700 bg-slate-100 border-slate-200" };
+  if (provider === "bank_transfer") return { label: "Bank", icon: Landmark, tone: "text-cyan-700 bg-cyan-50 border-cyan-100" };
+  return { label: provider || "Manual", icon: CreditCard, tone: "text-slate-700 bg-slate-100 border-slate-200" };
 };
 
 const metadataValue = (payment: AdminPayment, key: string) => {
@@ -34,6 +56,7 @@ const AdminPayments = () => {
   const [payments, setPayments] = useState<AdminPayment[]>([]);
   const [error, setError] = useState("");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -51,11 +74,11 @@ const AdminPayments = () => {
 
   const totals = useMemo(() => {
     const paid = payments.filter((payment) => payment.status === "paid");
-    const pendingManual = payments.filter((payment) => payment.status === "pending" && payment.provider !== "razorpay");
+    const manualPending = payments.filter((payment) => payment.status === "pending" && payment.provider !== "razorpay");
     return {
       paidAmount: paid.reduce((sum, payment) => sum + (payment.amount || 0), 0),
       paidCount: paid.length,
-      pendingManual: pendingManual.length,
+      manualPending: manualPending.length,
       razorpayPaid: payments.filter((payment) => payment.provider === "razorpay" && payment.status === "paid").length,
     };
   }, [payments]);
@@ -76,152 +99,178 @@ const AdminPayments = () => {
     }
   };
 
+  const pagedPayments = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return payments.slice(start, start + PAGE_SIZE);
+  }, [page, payments]);
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(payments.length / PAGE_SIZE));
+    if (page > totalPages) setPage(totalPages);
+  }, [page, payments.length]);
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div>
-          <h1 className="font-heading text-3xl font-bold text-foreground">Payments</h1>
-          <p className="mt-1 text-muted-foreground">
-            Razorpay payments verify automatically. UPI and QR payments stay pending until admin confirms receipt.
-          </p>
+    <div className="space-y-5">
+      <div className="rounded-lg border border-white/10 bg-slate-950 px-5 py-4 text-white shadow-xl shadow-slate-950/10">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-md border border-white/10 bg-white/10 px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-white/65">
+              <ShieldCheck size={13} />
+              Payment Control
+            </div>
+            <h1 className="mt-3 font-heading text-2xl font-bold tracking-tight md:text-3xl">Payments</h1>
+            <p className="mt-1 max-w-3xl text-sm leading-6 text-white/62">
+              Razorpay settles through server verification. UPI and QR records remain in manual review until admin confirms receipt.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={load}
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-white/12 bg-white px-4 text-sm font-bold text-slate-950 transition hover:bg-white/90"
+          >
+            <RefreshCcw size={16} />
+            Refresh
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={load}
-          className="inline-flex items-center justify-center gap-2 rounded-md border border-border bg-card px-4 py-2 text-sm font-bold text-foreground hover:bg-secondary"
-        >
-          <RefreshCcw size={16} />
-          Refresh
-        </button>
       </div>
 
       {error && (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+        <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm font-semibold text-destructive">
+          <AlertCircle size={16} />
           {error}
         </div>
       )}
 
-      <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         {[
-          { label: "Paid Revenue", value: formatMoney(totals.paidAmount), icon: IndianRupee },
-          { label: "Paid Payments", value: totals.paidCount, icon: CheckCircle2 },
-          { label: "Manual Pending", value: totals.pendingManual, icon: Smartphone },
-          { label: "Razorpay Auto Verified", value: totals.razorpayPaid, icon: ShieldCheck },
+          { label: "Paid revenue", value: formatMoney(totals.paidAmount), icon: IndianRupee },
+          { label: "Paid records", value: totals.paidCount, icon: CheckCircle2 },
+          { label: "Manual queue", value: totals.manualPending, icon: Smartphone },
+          { label: "Razorpay verified", value: totals.razorpayPaid, icon: BadgeCheck },
         ].map((item) => (
-          <div key={item.label} className="rounded-lg border border-border bg-card p-5 shadow-sm">
-            <div className="flex h-11 w-11 items-center justify-center rounded-md bg-primary/10 text-primary">
-              <item.icon size={20} />
+          <div key={item.label} className="rounded-lg border border-border bg-card px-4 py-3 shadow-sm">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">{item.label}</p>
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                <item.icon size={16} />
+              </span>
             </div>
-            <p className="mt-4 text-sm font-semibold text-muted-foreground">{item.label}</p>
-            <p className="mt-1 font-heading text-3xl font-bold text-foreground">{item.value}</p>
+            <p className="mt-2 truncate font-heading text-2xl font-bold text-foreground">{item.value}</p>
           </div>
         ))}
       </section>
 
-      <section className="rounded-lg border border-border bg-card shadow-sm">
-        <div className="border-b border-border px-5 py-4">
-          <h2 className="font-heading text-xl font-bold text-foreground">Payment Records</h2>
-        </div>
-        <div className="divide-y divide-border">
-          {payments.map((payment) => {
+      <section>
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+          {pagedPayments.map((payment) => {
             const booking = payment.bookingId;
             const user = booking?.userId;
             const vehicle = booking?.vehicleId;
             const canManualVerify = payment.status === "pending" && payment.provider !== "razorpay";
             const upiId = metadataValue(payment, "upiId");
             const payerUpiId = metadataValue(payment, "payerUpiId");
+            const method = methodConfig(payment.provider);
+            const MethodIcon = method.icon;
             const isUpdating = updatingId === idOf(payment);
 
             return (
-              <article key={idOf(payment)} className="grid gap-5 p-5 xl:grid-cols-[1.15fr_1fr_260px] xl:items-start">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="inline-flex items-center gap-2 rounded-md bg-secondary px-2.5 py-1 text-xs font-bold uppercase text-foreground">
-                      <CreditCard size={13} />
-                      {methodLabel(payment.provider)}
-                    </span>
-                    <span className={`rounded-md px-2.5 py-1 text-xs font-bold uppercase ${statusClass(payment.status)}`}>
-                      {payment.status || "pending"}
-                    </span>
-                    {payment.provider === "razorpay" && (
-                      <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/10 px-2.5 py-1 text-xs font-bold text-emerald-600">
-                        <ShieldCheck size={13} />
-                        server verified
+              <article
+                key={idOf(payment)}
+                className="rounded-lg border border-border bg-card p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"
+              >
+                <div className="flex items-start justify-between gap-3 border-b border-border pb-3">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className={`inline-flex h-7 items-center gap-1.5 rounded-md border px-2.5 text-xs font-bold ${method.tone}`}>
+                        <MethodIcon size={13} />
+                        {method.label}
                       </span>
-                    )}
+                      <span className={`inline-flex h-7 items-center rounded-md border px-2.5 text-xs font-bold uppercase ${statusStyle(payment.status)}`}>
+                        {payment.status || "pending"}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-xs text-muted-foreground">{formatDate(payment.createdAt)} - {payment.paymentFor || "customer_rental"}</p>
                   </div>
-                  <p className="mt-3 font-heading text-2xl font-bold text-foreground">
+                  <p className="shrink-0 text-right font-heading text-2xl font-bold leading-none text-foreground">
                     {formatMoney(payment.amount, payment.currency || "INR")}
                   </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {payment.createdAt ? new Date(payment.createdAt).toLocaleString("en-IN") : "-"} · {payment.paymentFor || "customer_rental"}
-                  </p>
-                  <div className="mt-4 grid gap-2 text-xs text-muted-foreground">
-                    <p>Payment ID: <span className="font-mono text-foreground">{idOf(payment) || "-"}</span></p>
-                    {payment.providerOrderId && <p>Order: <span className="font-mono text-foreground">{payment.providerOrderId}</span></p>}
-                    {payment.providerPaymentId && <p>Gateway payment: <span className="font-mono text-foreground">{payment.providerPaymentId}</span></p>}
-                    {payerUpiId && <p>User UPI ID: <span className="font-semibold text-foreground">{payerUpiId}</span></p>}
-                    {upiId && <p>MotoRentix UPI ID: <span className="font-semibold text-foreground">{upiId}</span></p>}
-                    {metadataValue(payment, "note") && <p>Note: <span className="text-foreground">{metadataValue(payment, "note")}</span></p>}
-                  </div>
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
-                  <div className="rounded-lg border border-border bg-secondary/35 p-4">
-                    <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">Customer</p>
-                    <p className="mt-2 font-bold text-foreground">{user?.name || "Unknown user"}</p>
-                    <p className="text-xs text-muted-foreground">{user?.email || "-"}</p>
-                    <p className="mt-2 text-sm font-semibold text-foreground">{user?.phone || "-"}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">
+                <div className="mt-3 grid gap-3 lg:grid-cols-[1fr_0.9fr]">
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">Customer</p>
+                    <p className="mt-1 truncate text-sm font-bold text-foreground">{user?.name || "Unknown customer"}</p>
+                    <p className="truncate text-xs text-muted-foreground">{user?.email || "-"}</p>
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                      <span className="rounded-md bg-secondary px-2 py-1 font-bold text-foreground">{user?.phone || "No phone"}</span>
+                      {user?.aadhaarNumber && <span className="rounded-md bg-secondary px-2 py-1 text-muted-foreground">Aadhaar {shortId(user.aadhaarNumber)}</span>}
+                    </div>
+                    <p className="mt-2 line-clamp-2 text-xs leading-5 text-muted-foreground">
                       {(user?.address || user?.city || user?.pincode)
                         ? `${user?.address || ""}${user?.city ? `, ${user.city}` : ""}${user?.pincode ? ` - ${user.pincode}` : ""}`
                         : "-"}
                     </p>
                   </div>
 
-                  <div className="rounded-lg border border-border bg-secondary/35 p-4">
-                    <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">Booking</p>
-                    <p className="mt-2 font-bold text-foreground">{vehicle?.name || "Vehicle booking"}</p>
-                    <p className="text-xs text-muted-foreground">{vehicle?.bikeNumber || vehicle?.category || "-"}</p>
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">Booking</p>
+                    <p className="mt-1 truncate text-sm font-bold text-foreground">{vehicle?.name || "Vehicle booking"}</p>
+                    <p className="truncate text-xs text-muted-foreground">{vehicle?.bikeNumber || vehicle?.category || "-"}</p>
                     <p className="mt-2 text-xs text-muted-foreground">
                       {booking?.startDate ? booking.startDate.split("T")[0] : "-"} to {booking?.endDate ? booking.endDate.split("T")[0] : "-"}
                     </p>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <span className="rounded-md bg-background px-2 py-1 text-xs font-bold text-foreground">Booking: {booking?.status || "-"}</span>
-                      <span className="rounded-md bg-background px-2 py-1 text-xs font-bold text-foreground">Payment: {booking?.paymentStatus || payment.status || "-"}</span>
+                    <div className="mt-2 flex flex-wrap gap-2 text-[11px] font-bold">
+                      <span className="rounded-md border border-border bg-background px-2 py-1 text-foreground">Booking {booking?.status || "-"}</span>
+                      <span className="rounded-md border border-border bg-background px-2 py-1 text-foreground">Pay {booking?.paymentStatus || payment.status || "-"}</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="rounded-lg border border-border bg-background p-4">
-                  <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">Verification</p>
+                <div className="mt-3 grid gap-1 border-t border-border pt-3 text-[11px] leading-5 text-muted-foreground">
+                  <p className="truncate">Payment ID <span className="font-mono text-foreground">{shortId(idOf(payment))}</span></p>
+                  {payment.providerOrderId && <p className="truncate">Order <span className="font-mono text-foreground">{shortId(payment.providerOrderId)}</span></p>}
+                  {payment.providerPaymentId && <p className="truncate">Gateway <span className="font-mono text-foreground">{shortId(payment.providerPaymentId)}</span></p>}
+                  {(payerUpiId || upiId) && (
+                    <p className="truncate">
+                      UPI <span className="font-semibold text-foreground">{payerUpiId || "-"}</span>
+                      {upiId ? <span> to <span className="font-semibold text-foreground">{upiId}</span></span> : null}
+                    </p>
+                  )}
+                </div>
+
+                <div className="mt-3">
                   {payment.provider === "razorpay" ? (
-                    <div className="mt-3 rounded-md bg-emerald-500/10 p-3 text-sm font-semibold text-emerald-700">
-                      Razorpay online payments are verified by backend signature check and webhook. No manual action needed.
+                    <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700">
+                      <div className="flex items-center gap-2 font-bold">
+                        <ShieldCheck size={15} />
+                        Auto verified
+                      </div>
                     </div>
                   ) : canManualVerify ? (
-                    <div className="mt-3 grid gap-2">
+                    <div className="grid grid-cols-2 gap-2">
                       <button
                         type="button"
                         onClick={() => updateStatus(payment, "paid")}
                         disabled={isUpdating}
-                        className="inline-flex items-center justify-center gap-2 rounded-md bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50"
+                        className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-emerald-600 px-3 text-xs font-bold text-white transition hover:bg-emerald-700 disabled:opacity-50"
                       >
-                        <CheckCircle2 size={16} />
-                        Verify Received
+                        <CheckCircle2 size={15} />
+                        Verify
                       </button>
                       <button
                         type="button"
                         onClick={() => updateStatus(payment, "failed")}
                         disabled={isUpdating}
-                        className="inline-flex items-center justify-center gap-2 rounded-md border border-rose-500/30 px-4 py-2.5 text-sm font-bold text-rose-600 hover:bg-rose-500/10 disabled:opacity-50"
+                        className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-rose-300 bg-white px-3 text-xs font-bold text-rose-600 transition hover:bg-rose-50 disabled:opacity-50"
                       >
-                        <XCircle size={16} />
-                        Mark Failed
+                        <XCircle size={15} />
+                        Failed
                       </button>
                     </div>
                   ) : (
-                    <p className="mt-3 text-sm text-muted-foreground">No manual action available for this payment.</p>
+                    <div className="rounded-md border border-border bg-secondary/45 px-3 py-2 text-xs font-semibold text-muted-foreground">
+                      Verification closed
+                    </div>
                   )}
                 </div>
               </article>
@@ -233,6 +282,8 @@ const AdminPayments = () => {
           )}
         </div>
       </section>
+
+      <AdminPagination page={page} total={payments.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
     </div>
   );
 };

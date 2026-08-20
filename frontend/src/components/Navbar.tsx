@@ -12,7 +12,6 @@ const Navbar = () => {
   const { isAuthenticated, logout, user } = useStore();
 
   const navLinks = [
-    { to: '/', label: 'Home' },
     { to: '/dashboard', label: 'Vehicles' },
     { to: '/about', label: 'About' },
     { to: '/contact', label: 'Contact' },

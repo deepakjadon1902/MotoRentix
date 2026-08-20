@@ -13,12 +13,11 @@ const BrandMark = ({ compact = false, inverted = false, className, logoClassName
     <span className={cn("inline-flex min-w-0 items-center gap-3", className)}>
       <span
         className={cn(
-          "relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-md border bg-white shadow-sm",
-          inverted ? "border-white/25" : "border-border",
+          "relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden",
           logoClassName,
         )}
       >
-        <img src={logo} alt="MotoRentix" className="h-full w-full object-contain p-1.5" />
+        <img src={logo} alt="MotoRentix" className="h-full w-full object-cover" />
       </span>
       {!compact && (
         <span className="min-w-0">

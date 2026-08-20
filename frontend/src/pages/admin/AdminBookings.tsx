@@ -1,12 +1,16 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { adminApi, type AdminBooking } from "@/lib/adminApi";
 import { useAdminStore } from "@/store/adminStore";
+import AdminPagination from "@/components/admin/AdminPagination";
+
+const PAGE_SIZE = 10;
 
 const AdminBookings = () => {
   const token = useAdminStore((s) => s.token);
   const [bookings, setBookings] = useState<AdminBooking[]>([]);
   const [error, setError] = useState("");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -39,6 +43,16 @@ const AdminBookings = () => {
     }
   };
 
+  const pagedBookings = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return bookings.slice(start, start + PAGE_SIZE);
+  }, [bookings, page]);
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(bookings.length / PAGE_SIZE));
+    if (page > totalPages) setPage(totalPages);
+  }, [bookings.length, page]);
+
   return (
     <div className="space-y-6">
       <div>
@@ -52,9 +66,9 @@ const AdminBookings = () => {
         </div>
       )}
 
-      <div className="rounded-2xl border border-border bg-background overflow-hidden">
+      <div className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
         <div className="px-6 py-4 border-b border-border font-heading font-bold text-foreground">Booking List</div>
-        <div className="overflow-x-auto">
+        <div className="hidden overflow-x-auto lg:block">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-secondary/50">
@@ -68,7 +82,7 @@ const AdminBookings = () => {
               </tr>
             </thead>
             <tbody>
-              {bookings.map((b) => (
+              {pagedBookings.map((b) => (
                 <tr key={b._id || b.id} className="border-b border-border/50 hover:bg-secondary/30">
                   <td className="px-6 py-4">
                     <div className="font-medium text-foreground">{b.userId?.name || "Unknown"}</div>
@@ -130,7 +144,40 @@ const AdminBookings = () => {
             </tbody>
           </table>
         </div>
+        <div className="divide-y divide-border lg:hidden">
+          {pagedBookings.map((b) => (
+            <article key={b._id || b.id} className="p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate font-bold text-foreground">{b.vehicleId?.name || "Vehicle"}</p>
+                  <p className="truncate text-xs text-muted-foreground">{b.userId?.name || "Unknown"} - {b.userId?.email || ""}</p>
+                </div>
+                <span className="rounded-md bg-secondary px-2.5 py-1 text-xs font-bold text-foreground">{b.status || "pending"}</span>
+              </div>
+              <div className="mt-3 grid gap-2 text-xs text-muted-foreground">
+                <p>Phone: <span className="font-semibold text-foreground">{b.userId?.phone || "-"}</span></p>
+                <p>Duration: <span className="font-semibold text-foreground">{b.startDate?.split("T")[0]} to {b.endDate?.split("T")[0]}</span></p>
+                <p>Total: <span className="font-semibold text-foreground">INR {b.totalPrice}</span></p>
+                <p>Aadhaar: <span className="font-semibold text-foreground">{b.userId?.aadhaarNumber || "-"}</span></p>
+              </div>
+              <select
+                value={b.status || "pending"}
+                onChange={(e) => updateStatus((b._id || b.id) as string, e.target.value as "pending" | "confirmed" | "rejected" | "completed")}
+                disabled={((!b._id && !b.id) || updatingId === (b._id || b.id))}
+                className="mt-3 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground disabled:opacity-50"
+              >
+                <option value="pending">pending</option>
+                <option value="confirmed">confirmed</option>
+                <option value="rejected">rejected</option>
+                <option value="completed">completed</option>
+              </select>
+            </article>
+          ))}
+          {bookings.length === 0 && <div className="p-6 text-sm text-muted-foreground">No bookings found.</div>}
+        </div>
       </div>
+
+      <AdminPagination page={page} total={bookings.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
     </div>
   );
 };

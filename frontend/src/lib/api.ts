@@ -16,6 +16,9 @@ type VehicleDto = {
   pricePerHour?: number;
   pricePerDay?: number;
   pricePerWeek?: number;
+  pricePerMonth?: number;
+  securityDeposit?: number;
+  rating?: number;
   availability?: boolean;
   status?: Vehicle["status"];
   availablePaymentMethods?: string[];
@@ -110,6 +113,9 @@ const mapVehicle = (v: VehicleDto): Vehicle => {
   pricePerHour: v.pricePerHour ?? 0,
   pricePerDay: v.pricePerDay ?? 0,
   pricePerWeek: v.pricePerWeek ?? 0,
+  pricePerMonth: v.pricePerMonth ?? 0,
+  securityDeposit: v.securityDeposit ?? 0,
+  rating: v.rating ?? 4.8,
   availability: Boolean(v.availability),
   status: v.status,
   availablePaymentMethods: v.availablePaymentMethods || [],

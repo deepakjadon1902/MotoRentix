@@ -8,6 +8,9 @@ import {
   type AdminTenant,
 } from "@/lib/adminApi";
 import { useAdminStore } from "@/store/adminStore";
+import AdminPagination from "@/components/admin/AdminPagination";
+
+const PAGE_SIZE = 10;
 
 const idOf = (value?: { _id?: string; id?: string } | string) =>
   typeof value === "string" ? value : value?._id || value?.id || "";
@@ -22,6 +25,7 @@ const AdminSubscriptions = () => {
   const [payments, setPayments] = useState<AdminPayment[]>([]);
   const [planDrafts, setPlanDrafts] = useState<Record<string, AdminPlan & { featureFlagsText?: string }>>({});
   const [error, setError] = useState("");
+  const [tenantPage, setTenantPage] = useState(1);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -62,6 +66,16 @@ const AdminSubscriptions = () => {
         .reduce((sum, payment) => sum + (payment.amount || 0), 0),
     [payments],
   );
+
+  const pagedTenants = useMemo(() => {
+    const start = (tenantPage - 1) * PAGE_SIZE;
+    return tenants.slice(start, start + PAGE_SIZE);
+  }, [tenantPage, tenants]);
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(tenants.length / PAGE_SIZE));
+    if (tenantPage > totalPages) setTenantPage(totalPages);
+  }, [tenantPage, tenants.length]);
 
   const toggleTenant = async (tenant: AdminTenant) => {
     if (!token) return;
@@ -259,7 +273,7 @@ const AdminSubscriptions = () => {
               </tr>
             </thead>
             <tbody>
-              {tenants.map((tenant) => {
+              {pagedTenants.map((tenant) => {
                 const subscription = subscriptions.find((item) => idOf(item.tenantId) === idOf(tenant));
                 return (
                   <tr key={idOf(tenant)} className="border-b border-border/50 hover:bg-secondary/30">
@@ -293,6 +307,7 @@ const AdminSubscriptions = () => {
           </table>
         </div>
       </div>
+      <AdminPagination page={tenantPage} total={tenants.length} pageSize={PAGE_SIZE} onPageChange={setTenantPage} />
     </div>
   );
 };

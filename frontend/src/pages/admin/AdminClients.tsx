@@ -2,6 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { BadgeCheck, Ban, Building2, CalendarClock, CreditCard, PlayCircle } from "lucide-react";
 import { adminApi, type AdminPlan, type AdminSubscription, type AdminTenant } from "@/lib/adminApi";
 import { useAdminStore } from "@/store/adminStore";
+import AdminPagination from "@/components/admin/AdminPagination";
+
+const PAGE_SIZE = 10;
 
 const idOf = (value?: { _id?: string; id?: string } | string) =>
   typeof value === "string" ? value : value?._id || value?.id || "";
@@ -39,6 +42,7 @@ const AdminClients = () => {
   const [planDrafts, setPlanDrafts] = useState<Record<string, { planId: string; billingCycle: BillingCycle; paymentStatus: "pending" | "paid"; endDate: string }>>({});
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [page, setPage] = useState(1);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -75,6 +79,16 @@ const AdminClients = () => {
       return item.status === "active" && end >= now && end <= soon;
     }).length;
   }, [subscriptions]);
+
+  const pagedClients = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return clients.slice(start, start + PAGE_SIZE);
+  }, [clients, page]);
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(clients.length / PAGE_SIZE));
+    if (page > totalPages) setPage(totalPages);
+  }, [clients.length, page]);
 
   const getSubscription = (tenant: AdminTenant) =>
     subscriptions.find((subscription) => idOf(subscription.tenantId) === idOf(tenant));
@@ -227,7 +241,7 @@ const AdminClients = () => {
               </tr>
             </thead>
             <tbody>
-              {clients.map((client) => {
+              {pagedClients.map((client) => {
                 const tenantId = idOf(client);
                 const subscription = getSubscription(client);
                 const draft = planDrafts[tenantId];
@@ -288,6 +302,7 @@ const AdminClients = () => {
           </table>
         </div>
       </div>
+      <AdminPagination page={page} total={clients.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
     </div>
   );
 };

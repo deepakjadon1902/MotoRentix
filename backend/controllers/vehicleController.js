@@ -1,11 +1,9 @@
 import Vehicle from "../models/Vehicle.js";
 import asyncHandler from "../middleware/asyncHandler.js";
+import { normalizeVehicleImages } from "../utils/assetPaths.js";
 
 const mapPublicVehicle = async (vehicle, includePaymentMethods = false) => {
-  const obj = vehicle.toObject();
-  if ((!Array.isArray(obj.images) || obj.images.length === 0) && obj.image) {
-    obj.images = [obj.image];
-  }
+  const obj = normalizeVehicleImages(vehicle.toObject());
 
   if (includePaymentMethods) {
     obj.availablePaymentMethods = ["cash", "upi"];
