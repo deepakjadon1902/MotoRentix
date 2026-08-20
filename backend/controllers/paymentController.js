@@ -9,11 +9,8 @@ import asyncHandler from "../middleware/asyncHandler.js";
 import { sendMail } from "../utils/mail.js";
 import { activateSubscriptionLifecycle } from "../utils/subscriptionLifecycle.js";
 import { verifyGenericWebhookHmac, verifyPayUHash, verifyRazorpayWebhook } from "../utils/razorpay.js";
-import { getActivePlanForTenant } from "../utils/planEntitlements.js";
 import crypto from "crypto";
 import QRCode from "qrcode";
-
-const platformRazorpaySecret = () => process.env.RAZORPAY_PLATFORM_KEY_SECRET || process.env.RAZORPAY_KEY_SECRET;
 
 const getTenantSettings = async (tenantId) => {
   const settings = await TenantSettings.findOne({ tenantId });
@@ -26,6 +23,30 @@ const getTenantSettings = async (tenantId) => {
 };
 
 const providerSettingsKey = (provider) => provider === "bank_transfer" ? "bankTransfer" : provider;
+
+const platformPaymentSettings = () => ({
+  razorpay: {
+    enabled: Boolean(process.env.RAZORPAY_PLATFORM_KEY_ID || process.env.RAZORPAY_KEY_ID),
+    keyId: process.env.RAZORPAY_PLATFORM_KEY_ID || process.env.RAZORPAY_KEY_ID,
+    keySecret: process.env.RAZORPAY_PLATFORM_KEY_SECRET || process.env.RAZORPAY_KEY_SECRET,
+  },
+  payu: {
+    enabled: Boolean(process.env.PAYU_PLATFORM_MERCHANT_KEY || process.env.PAYU_MERCHANT_KEY),
+    merchantKey: process.env.PAYU_PLATFORM_MERCHANT_KEY || process.env.PAYU_MERCHANT_KEY,
+    salt: process.env.PAYU_PLATFORM_SALT || process.env.PAYU_SALT,
+  },
+  stripe: {
+    enabled: Boolean(process.env.STRIPE_PLATFORM_SECRET_KEY || process.env.STRIPE_SECRET_KEY),
+    secretKey: process.env.STRIPE_PLATFORM_SECRET_KEY || process.env.STRIPE_SECRET_KEY,
+  },
+  upi: {
+    enabled: true,
+    upiId: process.env.MOTORENTIX_UPI_ID || process.env.PLATFORM_UPI_ID || process.env.UPI_ID,
+    displayName: process.env.MOTORENTIX_UPI_NAME || process.env.PLATFORM_UPI_NAME || "MotoRentix",
+  },
+  cash: { enabled: true },
+  bankTransfer: { enabled: true },
+});
 
 const frontendUrl = () => (process.env.FRONTEND_URL || "http://localhost:8080").replace(/\/$/, "");
 
@@ -168,23 +189,23 @@ export const createCustomerRentalPayment = asyncHandler(async (req, res) => {
     return res.status(409).json({ message: "Booking is already paid" });
   }
 
+  if (!booking.tenantId && booking.vehicleId) {
+    const bookedVehicle = await Vehicle.findById(booking.vehicleId).select("tenantId");
+    if (bookedVehicle?.tenantId) {
+      booking.tenantId = bookedVehicle.tenantId;
+      await booking.save();
+    }
+  }
+
   const [tenant, user, vehicle] = await Promise.all([
     Tenant.findById(booking.tenantId).select("companyName phone"),
     User.findById(req.user.id).select("name email phone"),
     Vehicle.findById(booking.vehicleId).select("name bikeNumber category"),
   ]);
 
-  const settings = await getTenantSettings(booking.tenantId);
-  const plan = await getActivePlanForTenant(booking.tenantId);
-  const gateways = plan?.gatewayAvailability instanceof Map
-    ? Object.fromEntries(plan.gatewayAvailability.entries())
-    : plan?.gatewayAvailability?.toObject?.() || plan?.gatewayAvailability || {};
-  if (gateways[provider] === false) {
-    return res.status(403).json({ message: `${provider} is not available on this company's subscription plan` });
-  }
-  const providerSettings = settings.paymentMethods?.[providerSettingsKey(provider)];
+  const providerSettings = platformPaymentSettings()[providerSettingsKey(provider)];
   if (!providerSettings?.enabled) {
-    return res.status(400).json({ message: `${provider} is not enabled by this rental company` });
+    return res.status(400).json({ message: `${provider} is not configured by MotoRentix admin` });
   }
 
   const payment = await Payment.create({
@@ -338,7 +359,16 @@ export const createCustomerRentalPayment = asyncHandler(async (req, res) => {
 
   if (provider === "upi") {
     if (!providerSettings.upiId) {
-      return res.status(400).json({ message: "UPI ID is not configured by this rental company" });
+      return res.status(201).json({
+        payment,
+        checkout: {
+          provider: "upi",
+          displayName: providerSettings.displayName || "MotoRentix",
+          amount: booking.totalPrice,
+          currency: "INR",
+          note: `MotoRentix admin will confirm payment for booking ${booking.id}`,
+        },
+      });
     }
     const note = `MotoRentix booking ${booking.id}`;
     const upiIntentUrl = buildUpiIntentUrl({

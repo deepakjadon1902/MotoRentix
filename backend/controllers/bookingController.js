@@ -51,6 +51,7 @@ export const createBooking = asyncHandler(async (req, res) => {
   }
 
   const booking = await Booking.create({
+    tenantId: vehicle.tenantId,
     userId: req.user.id,
     vehicleId: vehicle.id,
     durationType,

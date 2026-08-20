@@ -62,8 +62,7 @@ const Booking = () => {
   }, [id]);
 
   useEffect(() => {
-    const methods = vehicle?.availablePaymentMethods?.length ? vehicle.availablePaymentMethods : ["cash"];
-    setPaymentProvider(methods[0] || "cash");
+    setPaymentProvider("cash");
   }, [vehicle]);
 
   const pricing = useMemo(() => {
@@ -204,9 +203,7 @@ const Booking = () => {
         return;
       }
 
-      toast.success(
-        "Booking created. Payment is pending gateway confirmation.",
-      );
+      toast.success("Booking created. MotoRentix admin will manage payment confirmation.");
       await loadBookings();
       navigate(`/booking-status/${bookingId}`, { state: { provider: paymentProvider, paymentStatus: payment.payment.status || "pending" } });
     } catch (error) {
@@ -217,7 +214,7 @@ const Booking = () => {
   };
 
   const branch = vehicle.branchId && typeof vehicle.branchId === "object" ? vehicle.branchId : null;
-  const paymentMethods = vehicle.availablePaymentMethods?.length ? vehicle.availablePaymentMethods : ["cash", "upi"];
+  const paymentMethods = ["cash"];
 
   return (
     <div className="section-padding bg-background min-h-screen">
@@ -365,7 +362,7 @@ const Booking = () => {
               <div className="rounded-2xl border border-border/60 bg-background/60 p-5">
                 <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
                   <ShieldCheck size={16} className="text-primary" />
-                  Payment is handled by MotoRentix
+                  Payment is managed by MotoRentix admin
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {paymentMethods.map((method) => (
