@@ -222,6 +222,17 @@ export const api = {
   }> {
     return request("/payments/customer-rental", { method: "POST", token, body: JSON.stringify(payload) });
   },
+  async verifyCustomerRentalRazorpayPayment(
+    token: string,
+    payload: {
+      paymentId: string;
+      razorpay_payment_id: string;
+      razorpay_order_id: string;
+      razorpay_signature: string;
+    },
+  ): Promise<{ payment: { _id?: string; id?: string; amount?: number; status?: string; provider?: string }; booking?: BookingDto }> {
+    return request("/payments/customer-rental/razorpay/verify", { method: "POST", token, body: JSON.stringify(payload) });
+  },
   async listBookings(token: string): Promise<Booking[]> {
     const data = await request<BookingDto[]>("/bookings/user", { token });
     return data.map((b) => ({

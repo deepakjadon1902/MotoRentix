@@ -62,7 +62,7 @@ const Booking = () => {
   }, [id]);
 
   useEffect(() => {
-    setPaymentProvider("cash");
+    setPaymentProvider("razorpay");
   }, [vehicle]);
 
   const pricing = useMemo(() => {
@@ -162,10 +162,22 @@ const Booking = () => {
             bookingId,
             paymentId: payment.payment._id || payment.payment.id || "",
           },
-          handler: () => {
-            toast.success("Payment submitted. Booking will confirm automatically after gateway verification.");
-            loadBookings();
-            navigate(`/booking-status/${bookingId}`, { state: { provider: "razorpay", paymentStatus: "pending" } });
+          handler: async (response: Record<string, string>) => {
+            try {
+              const paymentId = payment.payment._id || payment.payment.id || "";
+              await api.verifyCustomerRentalRazorpayPayment(token, {
+                paymentId,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_signature: response.razorpay_signature,
+              });
+              toast.success("Razorpay payment verified. Booking confirmed.");
+              await loadBookings();
+              navigate(`/booking-status/${bookingId}`, { state: { provider: "razorpay", paymentStatus: "paid" } });
+            } catch (error) {
+              toast.error(error instanceof Error ? error.message : "Razorpay payment verification failed");
+              navigate(`/booking-status/${bookingId}`, { state: { provider: "razorpay", paymentStatus: "pending" } });
+            }
           },
           modal: {
             ondismiss: () => toast.info("Payment popup closed. Your booking is pending payment."),
@@ -214,7 +226,7 @@ const Booking = () => {
   };
 
   const branch = vehicle.branchId && typeof vehicle.branchId === "object" ? vehicle.branchId : null;
-  const paymentMethods = ["cash"];
+  const paymentMethods = ["razorpay", "cash"];
 
   return (
     <div className="section-padding bg-background min-h-screen">

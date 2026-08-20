@@ -26,12 +26,18 @@ const providerSettingsKey = (provider) => provider === "bank_transfer" ? "bankTr
 
 const platformPaymentSettings = () => ({
   razorpay: {
-    enabled: Boolean(process.env.RAZORPAY_PLATFORM_KEY_ID || process.env.RAZORPAY_KEY_ID),
+    enabled: Boolean(
+      (process.env.RAZORPAY_PLATFORM_KEY_ID || process.env.RAZORPAY_KEY_ID) &&
+      (process.env.RAZORPAY_PLATFORM_KEY_SECRET || process.env.RAZORPAY_KEY_SECRET)
+    ),
     keyId: process.env.RAZORPAY_PLATFORM_KEY_ID || process.env.RAZORPAY_KEY_ID,
     keySecret: process.env.RAZORPAY_PLATFORM_KEY_SECRET || process.env.RAZORPAY_KEY_SECRET,
   },
   payu: {
-    enabled: Boolean(process.env.PAYU_PLATFORM_MERCHANT_KEY || process.env.PAYU_MERCHANT_KEY),
+    enabled: Boolean(
+      (process.env.PAYU_PLATFORM_MERCHANT_KEY || process.env.PAYU_MERCHANT_KEY) &&
+      (process.env.PAYU_PLATFORM_SALT || process.env.PAYU_SALT)
+    ),
     merchantKey: process.env.PAYU_PLATFORM_MERCHANT_KEY || process.env.PAYU_MERCHANT_KEY,
     salt: process.env.PAYU_PLATFORM_SALT || process.env.PAYU_SALT,
   },
@@ -84,6 +90,18 @@ const verifyStripeSignature = ({ rawBody, signature, secret }) => {
   const expected = crypto.createHmac("sha256", secret).update(`${parts.t}.${rawBody}`).digest("hex");
   const expectedBuffer = Buffer.from(expected);
   const actualBuffer = Buffer.from(parts.v1);
+  if (expectedBuffer.length !== actualBuffer.length) return false;
+  return crypto.timingSafeEqual(expectedBuffer, actualBuffer);
+};
+
+const verifyRazorpayPaymentSignature = ({ orderId, paymentId, signature, secret }) => {
+  if (!orderId || !paymentId || !signature || !secret) return false;
+  const expected = crypto
+    .createHmac("sha256", secret)
+    .update(`${orderId}|${paymentId}`)
+    .digest("hex");
+  const expectedBuffer = Buffer.from(expected);
+  const actualBuffer = Buffer.from(signature);
   if (expectedBuffer.length !== actualBuffer.length) return false;
   return crypto.timingSafeEqual(expectedBuffer, actualBuffer);
 };
@@ -406,6 +424,71 @@ export const createCustomerRentalPayment = asyncHandler(async (req, res) => {
   return res.status(201).json({ payment, checkout: { provider, amount: booking.totalPrice } });
 });
 
+export const verifyCustomerRentalRazorpayPayment = asyncHandler(async (req, res) => {
+  const {
+    paymentId,
+    razorpay_payment_id: razorpayPaymentId,
+    razorpay_order_id: razorpayOrderId,
+    razorpay_signature: razorpaySignature,
+  } = req.body;
+
+  if (!paymentId || !razorpayPaymentId || !razorpayOrderId || !razorpaySignature) {
+    return res.status(400).json({ message: "Razorpay payment verification details are required" });
+  }
+
+  const payment = await Payment.findById(paymentId);
+  if (!payment || payment.paymentFor !== "customer_rental" || payment.provider !== "razorpay") {
+    return res.status(404).json({ message: "Razorpay payment record not found" });
+  }
+
+  const booking = await Booking.findOne({ _id: payment.bookingId, userId: req.user.id });
+  if (!booking) {
+    return res.status(404).json({ message: "Booking not found for this payment" });
+  }
+
+  if (payment.status === "paid" && booking.paymentStatus === "paid") {
+    return res.json({ payment, booking });
+  }
+
+  if (payment.providerOrderId !== razorpayOrderId) {
+    return res.status(400).json({ message: "Razorpay order mismatch" });
+  }
+
+  const providerSettings = platformPaymentSettings().razorpay;
+  const valid = verifyRazorpayPaymentSignature({
+    orderId: payment.providerOrderId,
+    paymentId: razorpayPaymentId,
+    signature: razorpaySignature,
+    secret: providerSettings.keySecret,
+  });
+
+  if (!valid) {
+    payment.status = "failed";
+    payment.metadata = {
+      ...(payment.metadata || {}),
+      razorpayVerification: { razorpayOrderId, razorpayPaymentId, valid: false },
+    };
+    await payment.save();
+    return res.status(400).json({ message: "Invalid Razorpay payment signature" });
+  }
+
+  const updatedPayment = await applyRentalPaymentStatus({
+    payment,
+    status: "paid",
+    providerPaymentId: razorpayPaymentId,
+    metadata: {
+      razorpayOrderId,
+      razorpayPaymentId,
+      razorpaySignature,
+      verifiedAt: new Date().toISOString(),
+      source: "checkout_handler",
+    },
+  });
+
+  const updatedBooking = await Booking.findById(booking.id);
+  res.json({ payment: updatedPayment, booking: updatedBooking });
+});
+
 export const platformRazorpayWebhook = asyncHandler(async (req, res) => {
   const rawBody = req.rawBody || JSON.stringify(req.body);
   const signature = req.headers["x-razorpay-signature"];
@@ -414,12 +497,34 @@ export const platformRazorpayWebhook = asyncHandler(async (req, res) => {
   }
 
   const event = req.body;
-  const paymentId = event?.payload?.payment?.entity?.id;
+  const paymentEntity = event?.payload?.payment?.entity || {};
+  const paymentId = paymentEntity.id;
+  const orderId = paymentEntity.order_id;
+  const internalPaymentId = paymentEntity.notes?.paymentId;
   const status = event?.event === "payment.captured" ? "paid" : event?.event === "payment.failed" ? "failed" : null;
-  const subscriptionId = event?.payload?.payment?.entity?.notes?.subscriptionId;
+  const subscriptionId = paymentEntity.notes?.subscriptionId;
 
   if (paymentId && status) {
     await Payment.findOneAndUpdate({ providerPaymentId: paymentId }, { status, metadata: event }, { upsert: false });
+  }
+
+  if (paymentId && status) {
+    const rentalClauses = definedClauses([
+      { providerPaymentId: paymentId },
+      { providerOrderId: orderId },
+      { _id: internalPaymentId },
+    ]);
+    const payment = rentalClauses.length
+      ? await Payment.findOne({ paymentFor: "customer_rental", provider: "razorpay", $or: rentalClauses })
+      : null;
+    if (payment) {
+      await applyRentalPaymentStatus({
+        payment,
+        status,
+        providerPaymentId: paymentId,
+        metadata: event,
+      });
+    }
   }
 
   if (subscriptionId && status === "paid") {
